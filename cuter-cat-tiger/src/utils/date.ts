@@ -1,0 +1,93 @@
+// UTC+8 日期換算工具。
+//
+// shared-spec.md 第 5 節規定：任何「當天」的判斷一律換算為 UTC+8，禁止使用瀏覽器
+// 本地時區（Date 的 getFullYear/getHours 等 local getter）或 toISOString().slice(0,10)。
+// 這裡改用「把 UTC 時間戳位移 +8 小時後，再用 UTC getter 取值」的方式，確保結果
+// 與使用者瀏覽器所在時區無關。
+//
+// 這個檔案是唯一定義來源，composables/useRecords.ts、composables/useDailyStats.ts、
+// components/record/DateNav.vue 都應呼叫這裡，不要各自重算。
+
+const UTC8_OFFSET_MS = 8 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000
+
+function pad(n: number): string {
+  return n < 10 ? `0${n}` : `${n}`
+}
+
+function toUtc8Shifted(date: Date): Date {
+  return new Date(date.getTime() + UTC8_OFFSET_MS)
+}
+
+/** 由 Date 物件取得 'YYYY-MM-DD' 格式的日期 key，代表該時刻在 UTC+8 的日期 */
+export function dateKeyFromDate(date: Date): string {
+  const s = toUtc8Shifted(date)
+  return `${s.getUTCFullYear()}-${pad(s.getUTCMonth() + 1)}-${pad(s.getUTCDate())}`
+}
+
+/** 由 UTC ISO 字串取得 'YYYY-MM-DD' 格式的日期 key（UTC+8 當天） */
+export function dateKeyFromIso(iso: string): string {
+  return dateKeyFromDate(new Date(iso))
+}
+
+export function todayDateKey(): string {
+  return dateKeyFromDate(new Date())
+}
+
+/** 日期 key 前後移動 n 天（n 可為負數），回傳新的日期 key */
+export function addDaysToDateKey(key: string, delta: number): string {
+  const [y, m, d] = key.split('-').map(Number)
+  // 用當天正午建構再位移一整天的倍數，避免邊界問題
+  const base = Date.UTC(y, m - 1, d, 12, 0, 0)
+  const next = new Date(base + delta * DAY_MS)
+  return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`
+}
+
+export function isTodayDateKey(key: string): boolean {
+  return key === todayDateKey()
+}
+
+/** 日期 key 是否晚於 UTC+8 的今天（尚未定案是否要限制翻頁，先提供判斷函式供之後使用） */
+export function isFutureDateKey(key: string): boolean {
+  return key > todayDateKey()
+}
+
+const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
+
+/** 'YYYY-MM-DD' → '星期X' */
+export function weekdayLabel(key: string): string {
+  const [y, m, d] = key.split('-').map(Number)
+  const w = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+  return `星期${WEEKDAY_LABELS[w]}`
+}
+
+/** 'YYYY-MM-DD' → '2026年8月18日' */
+export function formatDateLabel(key: string): string {
+  const [y, m, d] = key.split('-').map(Number)
+  return `${y}年${m}月${d}日`
+}
+
+/** UTC ISO 字串 → <input type="datetime-local"> 需要的值，顯示為 UTC+8 當地時間 */
+export function isoToDateTimeLocalValue(iso: string): string {
+  const s = toUtc8Shifted(new Date(iso))
+  return `${s.getUTCFullYear()}-${pad(s.getUTCMonth() + 1)}-${pad(s.getUTCDate())}T${pad(s.getUTCHours())}:${pad(s.getUTCMinutes())}`
+}
+
+/** <input type="datetime-local"> 的值（視為 UTC+8 當地時間）→ UTC ISO 字串 */
+export function dateTimeLocalValueToIso(value: string): string {
+  const [datePart, timePart] = value.split('T')
+  const [y, m, d] = datePart.split('-').map(Number)
+  const [hh, mm] = timePart.split(':').map(Number)
+  const utcMs = Date.UTC(y, m - 1, d, hh, mm) - UTC8_OFFSET_MS
+  return new Date(utcMs).toISOString()
+}
+
+export function nowDateTimeLocalValue(): string {
+  return isoToDateTimeLocalValue(new Date().toISOString())
+}
+
+/** UTC ISO 字串 → 'HH:mm'（UTC+8 當地時間） */
+export function formatTimeLabel(iso: string): string {
+  const s = toUtc8Shifted(new Date(iso))
+  return `${pad(s.getUTCHours())}:${pad(s.getUTCMinutes())}`
+}

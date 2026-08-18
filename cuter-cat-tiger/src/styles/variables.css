@@ -1,0 +1,18 @@
+:root {
+  --paper: #E7EBDF;
+  --paper-dark: #DAE0CD;
+  --card: #FBFBF5;
+  --ink: #26302A;
+  --ink-soft: #6B7568;
+  --line: #C7CEBB;
+  --water: #2F6F6B;
+  --water-soft: #DCEAE8;
+  --food: #C97A2B;
+  --food-soft: #F6E6D2;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+
+  --font-heading: 'Fraunces', serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-body: 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+}

@@ -1,0 +1,23 @@
+# 白名單模式：先忽略全部，再放行指定路徑
+/*
+!/.gitignore
+!/cuter-cat-tiger/
+
+/cuter-cat-tiger/*
+!/cuter-cat-tiger/functions/
+!/cuter-cat-tiger/public/
+!/cuter-cat-tiger/server/
+!/cuter-cat-tiger/src/
+!/cuter-cat-tiger/.gitignore
+!/cuter-cat-tiger/env.d.ts
+!/cuter-cat-tiger/index.html
+!/cuter-cat-tiger/package.json
+!/cuter-cat-tiger/package-lock.json
+!/cuter-cat-tiger/tsconfig.json
+!/cuter-cat-tiger/tsconfig.app.json
+!/cuter-cat-tiger/tsconfig.node.json
+!/cuter-cat-tiger/tsconfig.functions.json
+!/cuter-cat-tiger/tsconfig.worker.json
+!/cuter-cat-tiger/vite.config.ts
+!/cuter-cat-tiger/worker-configuration.d.ts
+!/cuter-cat-tiger/wrangler.jsonc
