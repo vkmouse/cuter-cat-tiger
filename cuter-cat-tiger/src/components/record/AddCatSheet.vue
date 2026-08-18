@@ -77,7 +77,7 @@ function handleSubmit() {
   background: var(--card);
   border-radius: 22px 22px 0 0;
   box-shadow: 0 -10px 30px rgba(38, 48, 42, 0.25);
-  padding: 10px 22px 26px;
+  padding: 10px 22px calc(26px + env(safe-area-inset-bottom));
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 11;
@@ -116,7 +116,7 @@ function handleSubmit() {
 .field input {
   width: 100%;
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 16px;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
