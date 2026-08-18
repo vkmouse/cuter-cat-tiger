@@ -26,7 +26,7 @@ watch(
       return
     }
     if (!activeCatId.value || !list.some((c) => c.id === activeCatId.value)) {
-      activeCatId.value = list[0].id
+      activeCatId.value = list[0]!.id
     }
   },
   { immediate: true },

@@ -15,6 +15,13 @@ function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`
 }
 
+// key 一律是本檔內產生或已通過 requireDateParam 驗證的 'YYYY-MM-DD'，格式保證正確，
+// 用 ! 跳過 noUncheckedIndexedAccess 的 undefined 檢查
+function parseDateKey(key: string): [number, number, number] {
+  const [y, m, d] = key.split('-').map(Number)
+  return [y!, m!, d!]
+}
+
 function toUtc8Shifted(date: Date): Date {
   return new Date(date.getTime() + UTC8_OFFSET_MS)
 }
@@ -36,7 +43,7 @@ export function todayDateKey(): string {
 
 /** 日期 key 前後移動 n 天（n 可為負數），回傳新的日期 key */
 export function addDaysToDateKey(key: string, delta: number): string {
-  const [y, m, d] = key.split('-').map(Number)
+  const [y, m, d] = parseDateKey(key)
   // 用當天正午建構再位移一整天的倍數，避免邊界問題
   const base = Date.UTC(y, m - 1, d, 12, 0, 0)
   const next = new Date(base + delta * DAY_MS)
@@ -56,14 +63,14 @@ const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 
 /** 'YYYY-MM-DD' → '星期X' */
 export function weekdayLabel(key: string): string {
-  const [y, m, d] = key.split('-').map(Number)
+  const [y, m, d] = parseDateKey(key)
   const w = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
   return `星期${WEEKDAY_LABELS[w]}`
 }
 
 /** 'YYYY-MM-DD' → '2026年8月18日' */
 export function formatDateLabel(key: string): string {
-  const [y, m, d] = key.split('-').map(Number)
+  const [y, m, d] = parseDateKey(key)
   return `${y}年${m}月${d}日`
 }
 
@@ -75,9 +82,10 @@ export function isoToDateTimeLocalValue(iso: string): string {
 
 /** <input type="datetime-local"> 的值（視為 UTC+8 當地時間）→ UTC ISO 字串 */
 export function dateTimeLocalValueToIso(value: string): string {
-  const [datePart, timePart] = value.split('T')
-  const [y, m, d] = datePart.split('-').map(Number)
-  const [hh, mm] = timePart.split(':').map(Number)
+  // <input type="datetime-local"> 非空時保證是 'YYYY-MM-DDTHH:mm'，格式固定
+  const [datePart, timePart] = value.split('T') as [string, string]
+  const [y, m, d] = parseDateKey(datePart)
+  const [hh, mm] = timePart.split(':').map(Number) as [number, number]
   const utcMs = Date.UTC(y, m - 1, d, hh, mm) - UTC8_OFFSET_MS
   return new Date(utcMs).toISOString()
 }
