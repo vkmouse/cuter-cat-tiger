@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// Storybook 專用的「整合示範」元件，不屬於正式 app 程式碼。
-// 目的：把 record/ 底下所有元件組裝成跟 HomeView.vue 一樣的畫面，
+// Storybook 專用檔案，不屬於正式 app 程式碼，只是刻意跟原始碼同名放在對應的
+// views/ 資料夾下，方便對照：這裡示範的是 cuter-cat-tiger/src/views/HomeView.vue。
+// 目的：把 components/record/ 底下所有元件組裝成跟正式版一樣的畫面，
 // 但用記憶體內的假資料 + setTimeout 模擬延遲取代真實 API（useCats/useRecords/...），
 // 讓 Storybook 裡可以真的點擊新增/編輯/刪除紀錄、切換貓咪、切換日期、看多貓總覽。
 import { computed, reactive, ref, watch } from 'vue'

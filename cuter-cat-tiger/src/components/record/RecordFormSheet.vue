@@ -79,7 +79,7 @@ function handleSubmit() {
     <form @submit.prevent="handleSubmit">
       <div v-if="!isLitter(type)" class="field">
         <label for="fAmount">{{ amountLabel() }}</label>
-        <input id="fAmount" v-model="amount" type="number" step="0.1" min="0" required />
+        <input id="fAmount" v-model="amount" type="number" inputmode="decimal" step="0.1" min="0" required />
       </div>
       <div class="field">
         <label for="fTime">時間</label>
