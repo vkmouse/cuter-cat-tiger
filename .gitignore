@@ -2,6 +2,7 @@
 /*
 !/.gitignore
 !/cuter-cat-tiger/
+!/cuter-cat-tiger-storybook/
 
 /cuter-cat-tiger/*
 !/cuter-cat-tiger/functions/
@@ -21,3 +22,9 @@
 !/cuter-cat-tiger/vite.config.ts
 !/cuter-cat-tiger/worker-configuration.d.ts
 !/cuter-cat-tiger/wrangler.jsonc
+
+/cuter-cat-tiger-storybook/*
+!/cuter-cat-tiger-storybook/.storybook/
+!/cuter-cat-tiger-storybook/src/
+!/cuter-cat-tiger-storybook/README.md
+!/cuter-cat-tiger-storybook/package.json
