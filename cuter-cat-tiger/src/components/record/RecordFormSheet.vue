@@ -82,8 +82,12 @@ function handleSubmit() {
 </template>
 
 <style scoped>
-/* iOS Safari 用自己的樣式渲染 datetime-local，忽略部分 CSS，文字置中、內距跟其他欄位不同而跑版 */
+/* iOS Safari 對 datetime-local 預設套用原生外觀，這個外觀自帶一段內距，
+   不受 CSS padding 或 ::-webkit-datetime-edit 影響，導致文字比其他欄位偏右。
+   先關掉原生外觀，讓自訂 padding 生效，跟其他欄位對齊 */
 .field input[type='datetime-local'] {
+  -webkit-appearance: none;
+  appearance: none;
   min-height: 40px;
   line-height: 1.3;
   text-align: left;
@@ -92,10 +96,12 @@ function handleSubmit() {
 .field input[type='datetime-local']::-webkit-date-and-time-value {
   text-align: left;
   margin: 0;
+  padding: 0;
 }
 
 .field input[type='datetime-local']::-webkit-datetime-edit {
   text-align: left;
   padding: 0;
+  margin: 0;
 }
 </style>
