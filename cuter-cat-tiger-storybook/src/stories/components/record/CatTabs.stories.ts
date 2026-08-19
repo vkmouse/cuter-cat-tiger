@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import CatTabs from '../../../cuter-cat-tiger/src/components/record/CatTabs.vue'
-import type { Cat } from '../../../cuter-cat-tiger/src/types'
+import CatTabs from '../../../../../cuter-cat-tiger/src/components/record/CatTabs.vue'
+import type { Cat } from '../../../../../cuter-cat-tiger/src/types'
 
 function makeCat(id: number, name: string): Cat {
   return {

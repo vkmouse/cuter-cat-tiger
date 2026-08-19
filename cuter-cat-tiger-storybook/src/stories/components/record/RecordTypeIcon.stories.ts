@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import RecordTypeIcon from '../../../cuter-cat-tiger/src/components/record/RecordTypeIcon.vue'
+import RecordTypeIcon from '../../../../../cuter-cat-tiger/src/components/record/RecordTypeIcon.vue'
 
 const meta = {
   title: 'Record/RecordTypeIcon',

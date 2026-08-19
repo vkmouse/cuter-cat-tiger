@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import BaseSheet from '../../../cuter-cat-tiger/src/components/record/BaseSheet.vue'
+import BaseSheet from '../../../../../cuter-cat-tiger/src/components/record/BaseSheet.vue'
 
 const meta = {
   title: 'Record/BaseSheet',

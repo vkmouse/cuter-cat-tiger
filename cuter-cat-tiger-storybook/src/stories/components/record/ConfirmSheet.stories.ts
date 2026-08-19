@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import ConfirmSheet from '../../../cuter-cat-tiger/src/components/record/ConfirmSheet.vue'
+import ConfirmSheet from '../../../../../cuter-cat-tiger/src/components/record/ConfirmSheet.vue'
 
 const meta = {
   title: 'Record/ConfirmSheet',

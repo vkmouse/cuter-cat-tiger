@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import RecordRow from '../../../cuter-cat-tiger/src/components/record/RecordRow.vue'
-import type { CatRecord } from '../../../cuter-cat-tiger/src/types'
+import RecordRow from '../../../../../cuter-cat-tiger/src/components/record/RecordRow.vue'
+import type { CatRecord } from '../../../../../cuter-cat-tiger/src/types'
 
 function makeRecord(overrides: Partial<CatRecord>): CatRecord {
   return {

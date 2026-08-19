@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import OverviewSheet from '../../../cuter-cat-tiger/src/components/record/OverviewSheet.vue'
-import type { DailyStat } from '../../../cuter-cat-tiger/src/types'
+import OverviewSheet from '../../../../../cuter-cat-tiger/src/components/record/OverviewSheet.vue'
+import type { DailyStat } from '../../../../../cuter-cat-tiger/src/types'
 
 function makeStat(overrides: Partial<DailyStat> & Pick<DailyStat, 'catId' | 'name'>): DailyStat {
   return {

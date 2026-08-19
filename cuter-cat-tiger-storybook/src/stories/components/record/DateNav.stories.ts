@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import DateNav from '../../../cuter-cat-tiger/src/components/record/DateNav.vue'
+import DateNav from '../../../../../cuter-cat-tiger/src/components/record/DateNav.vue'
 
 const meta = {
   title: 'Record/DateNav',

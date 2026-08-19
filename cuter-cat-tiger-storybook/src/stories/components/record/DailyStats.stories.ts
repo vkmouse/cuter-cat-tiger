@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import DailyStats from '../../../cuter-cat-tiger/src/components/record/DailyStats.vue'
+import DailyStats from '../../../../../cuter-cat-tiger/src/components/record/DailyStats.vue'
 
 const meta = {
   title: 'Record/DailyStats',
