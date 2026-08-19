@@ -7,9 +7,11 @@ import RecordList from '../components/record/RecordList.vue'
 import RecordFormSheet from '../components/record/RecordFormSheet.vue'
 import AddCatSheet from '../components/record/AddCatSheet.vue'
 import ConfirmSheet from '../components/record/ConfirmSheet.vue'
+import OverviewSheet from '../components/record/OverviewSheet.vue'
 import { useCats } from '../composables/useCats'
 import { useRecords } from '../composables/useRecords'
 import { useDailyStats } from '../composables/useDailyStats'
+import { useAllCatsDailyStats } from '../composables/useAllCatsDailyStats'
 import { addDaysToDateKey, dateTimeLocalValueToIso, todayDateKey } from '../utils/date'
 import type { CatRecord, RecordType } from '../types'
 
@@ -56,6 +58,25 @@ const {
 } = useRecords(activeCatId, selectedDate)
 
 const { waterMl, foodG, loading: statsLoading } = useDailyStats(activeCatId, selectedDate)
+
+// ---------- 多貓總覽底部抽屜 ----------
+const overviewOpen = ref(false)
+const {
+  stats: allCatsStats,
+  loading: allCatsStatsLoading,
+  error: allCatsStatsError,
+} = useAllCatsDailyStats(selectedDate, overviewOpen)
+
+function openOverview() {
+  overviewOpen.value = true
+}
+function closeOverview() {
+  overviewOpen.value = false
+}
+function handleOverviewSelectCat(catId: number) {
+  activeCatId.value = catId
+  closeOverview()
+}
 
 // ---------- 底部抽屜（新增／編輯共用） ----------
 const sheetOpen = ref(false)
@@ -155,7 +176,7 @@ async function handleConfirmDelete() {
     <CatTabs :cats="cats" :active-cat-id="activeCatId" @select="(id) => (activeCatId = id)" @add-cat="openAddCatSheet" />
 
     <div class="card">
-      <DateNav :date="selectedDate" @prev-day="goPrevDay" @next-day="goNextDay" />
+      <DateNav :date="selectedDate" @prev-day="goPrevDay" @next-day="goNextDay" @open-overview="openOverview" />
 
       <DailyStats :water-ml="waterMl" :food-g="foodG" :loading="statsLoading" />
 
@@ -186,6 +207,17 @@ async function handleConfirmDelete() {
   />
 
   <AddCatSheet :open="addCatSheetOpen" :saving="addingCat" @cancel="closeAddCatSheet" @save="handleAddCatSave" />
+
+  <OverviewSheet
+    :open="overviewOpen"
+    :date="selectedDate"
+    :stats="allCatsStats"
+    :active-cat-id="activeCatId"
+    :loading="allCatsStatsLoading"
+    :error="allCatsStatsError"
+    @cancel="closeOverview"
+    @select-cat="handleOverviewSelectCat"
+  />
 
   <ConfirmSheet
     :open="deleteConfirmOpen"

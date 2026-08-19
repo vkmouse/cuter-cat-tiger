@@ -26,9 +26,15 @@ const emit = defineEmits<{
     >
       {{ cat.name }}
     </div>
-    <div class="cat-tab add" role="button" tabindex="0" @click="emit('addCat')" @keydown.enter="emit('addCat')">
-      + 新增貓咪
-    </div>
+    <button
+      type="button"
+      class="add-cat-btn"
+      aria-label="新增貓咪"
+      title="新增貓咪"
+      @click="emit('addCat')"
+    >
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+    </button>
   </div>
 </template>
 
@@ -76,10 +82,26 @@ const emit = defineEmits<{
   box-shadow: 0 -2px 0 var(--water) inset;
 }
 
-.cat-tab.add {
-  color: var(--ink-soft);
-  font-weight: 500;
+/* 新增貓咪只是偶爾才用到的次要動作，刻意弱化成純圖示的小圓鈕，
+   跟上面貓咪分頁的視覺權重拉開，避免搶走主要內容的注意力。 */
+.add-cat-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  align-self: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
   background: transparent;
-  border-style: dashed;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.add-cat-btn:hover {
+  border-color: var(--water);
+  color: var(--water);
 }
 </style>
