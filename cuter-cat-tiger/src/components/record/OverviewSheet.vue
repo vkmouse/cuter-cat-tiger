@@ -51,9 +51,9 @@ function handleSelect(catId: number) {
 </script>
 
 <template>
-  <div class="overview-backdrop" :class="{ show: open }" @click="emit('cancel')" />
-  <div class="overview-sheet" :class="{ show: open }" role="dialog" aria-modal="true" aria-labelledby="overviewSheetTitle">
-    <div class="handle" aria-hidden="true" />
+  <div class="sheet-backdrop sheet-backdrop--elevated" :class="{ show: open }" @click="emit('cancel')" />
+  <div class="sheet-panel sheet-panel--elevated overview-sheet" :class="{ show: open }" role="dialog" aria-modal="true" aria-labelledby="overviewSheetTitle">
+    <div class="sheet-handle" aria-hidden="true" />
     <h2 id="overviewSheetTitle">今日總覽 · {{ formatDateLabel(date) }}</h2>
 
     <div v-if="loading" class="state-msg">載入中…</div>
@@ -95,53 +95,14 @@ function handleSelect(catId: number) {
 </template>
 
 <style scoped>
-.overview-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(38, 48, 42, 0.35);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-  z-index: 12;
-}
-
-.overview-backdrop.show {
-  opacity: 1;
-  pointer-events: auto;
-}
-
+/* 貓咪數量多時內容可能超過畫面高度，限制 max-height 並可捲動 */
 .overview-sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  max-width: 420px;
   max-height: 72vh;
-  margin: 0 auto;
-  background: var(--card);
-  border-radius: 22px 22px 0 0;
-  box-shadow: 0 -10px 30px rgba(38, 48, 42, 0.25);
   padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
-  transform: translateY(100%);
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-  z-index: 13;
   overflow-y: auto;
 }
 
-.overview-sheet.show {
-  transform: translateY(0);
-}
-
-.handle {
-  width: 40px;
-  height: 4px;
-  background: var(--line);
-  border-radius: 4px;
-  margin: 8px auto 14px;
-}
-
 .overview-sheet h2 {
-  font-family: var(--font-heading);
   font-size: 1.1rem;
   margin: 0 0 14px;
 }

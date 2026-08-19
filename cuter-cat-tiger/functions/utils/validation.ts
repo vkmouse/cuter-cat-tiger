@@ -20,6 +20,19 @@ export function errorResponse(err: unknown): Response {
   return Response.json({ error: '伺服器發生錯誤' }, { status: 500 })
 }
 
+/** 包裝 handler，統一處理未預期錯誤，避免每個路由各自重複 try/catch */
+export function withErrorHandling<Env = unknown>(
+  handler: PagesFunction<Env>,
+): PagesFunction<Env> {
+  return async (context) => {
+    try {
+      return await handler(context)
+    } catch (err) {
+      return errorResponse(err)
+    }
+  }
+}
+
 export function requireNonEmptyString(value: unknown, field: string): string {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new ApiError(400, `${field} 為必填字串`)

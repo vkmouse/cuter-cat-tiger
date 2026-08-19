@@ -1,5 +1,5 @@
 import type { Env } from '../types.js'
-import { errorResponse } from '../utils/validation.js'
+import { withErrorHandling } from '../utils/validation.js'
 
 /**
  * 資料庫初始化用的 DDL，取代原本 migrations/0001_init.sql 的內容。
@@ -27,16 +27,12 @@ const INIT_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_records_occurred_at ON records(occurred_at)`,
 ]
 
-export const onRequestPost: PagesFunction<Env> = async (context) => {
-  try {
-    const db = context.env.DB
-    for (const sql of INIT_STATEMENTS) {
-      await db.prepare(sql).run()
-    }
-    return Response.json({
-      message: '資料庫初始化完成（cats / records 資料表已建立，若已存在則略過）',
-    })
-  } catch (err) {
-    return errorResponse(err)
+export const onRequestPost: PagesFunction<Env> = withErrorHandling(async (context) => {
+  const db = context.env.DB
+  for (const sql of INIT_STATEMENTS) {
+    await db.prepare(sql).run()
   }
-}
+  return Response.json({
+    message: '資料庫初始化完成（cats / records 資料表已建立，若已存在則略過）',
+  })
+})
