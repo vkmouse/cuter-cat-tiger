@@ -9,7 +9,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   prevDay: []
   nextDay: []
-  openOverview: []
+  openAllCatsStats: []
 }>()
 
 const dateLabel = computed(() => formatDateLabel(props.date))
@@ -34,7 +34,7 @@ const dateSub = computed(() => {
       <button class="nav-arrow" aria-label="後一天" @click="emit('nextDay')">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
       </button>
-      <button class="overview-btn" aria-label="多貓總覽" title="多貓總覽" @click="emit('openOverview')">
+      <button class="allcats-stats-btn" aria-label="多貓總覽" title="多貓總覽" @click="emit('openAllCatsStats')">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
       </button>
     </div>
@@ -84,7 +84,7 @@ const dateSub = computed(() => {
   background: var(--paper-dark);
 }
 
-.overview-btn {
+.allcats-stats-btn {
   background: var(--paper);
   border: 1px solid var(--line);
   cursor: pointer;
@@ -98,7 +98,7 @@ const dateSub = computed(() => {
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.overview-btn:hover {
+.allcats-stats-btn:hover {
   background: var(--water);
   color: #fff;
 }

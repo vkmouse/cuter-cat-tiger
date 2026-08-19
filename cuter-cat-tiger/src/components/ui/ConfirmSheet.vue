@@ -39,7 +39,7 @@ const emit = defineEmits<{
 </template>
 
 <style>
-/* 不能加 scoped：原因同 OverviewSheet，h2 現在是 BaseSheet 的內部節點，
+/* 不能加 scoped：原因同 AllCatsStatsSheet，h2 現在是 BaseSheet 的內部節點，
    scoped CSS 碰不到，這裡只是把原本的 8px 標題間距用專屬 class 保留下來。 */
 .confirm-sheet-panel h2 {
   margin: 0 0 8px;

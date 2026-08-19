@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { formatDateLabel, formatSinceLabel } from '../../utils/date'
+import { round1 } from '../../utils/number'
 import type { DailyStat } from '../../types'
-import RecordTypeIcon from './RecordTypeIcon.vue'
-import BaseSheet from './BaseSheet.vue'
+import RecordTypeIcon from '../record/RecordTypeIcon.vue'
+import BaseSheet from '../ui/BaseSheet.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -24,10 +25,6 @@ const emit = defineEmits<{
   cancel: []
   selectCat: [catId: number]
 }>()
-
-function round1(n: number): number {
-  return Math.round(n * 10) / 10
-}
 
 // 每隻貓的水量/飼料量 bar 用「同一批貓咪裡的最大值」當作滿格基準，
 // 純粹讓彼此的量一眼比得出來，不是什麼「目標值」（目前資料模型沒有每隻貓的目標量）。
@@ -57,18 +54,18 @@ function handleSelect(catId: number) {
     :open="open"
     :title="`今日總覽 · ${formatDateLabel(date)}`"
     elevated
-    panel-class="overview-sheet-panel"
+    panel-class="allcats-stats-panel"
     @cancel="emit('cancel')"
   >
     <div v-if="loading" class="state-msg">載入中…</div>
     <div v-else-if="error" class="state-msg error">{{ error }}</div>
     <div v-else-if="stats.length === 0" class="state-msg">還沒有貓咪資料。</div>
 
-    <ul v-else class="overview-list">
+    <ul v-else class="stats-list">
       <li
         v-for="stat in stats"
         :key="stat.catId"
-        class="overview-row"
+        class="stats-row"
         :class="{ active: stat.catId === activeCatId }"
         role="button"
         tabindex="0"
@@ -110,15 +107,15 @@ function handleSelect(catId: number) {
 
 <style>
 /* 不能加 scoped：sheet-panel 是 BaseSheet 的 root 元素，scoped CSS 的 data-v 屬性
-   碰不到子元件內部渲染出來的節點。這裡改用專屬且不易撞名的 class，
+   碰不到子元件內部渲染出來的節點。這裡改用專屬且不易撞名的 class（allcats-stats-panel），
    只調整這個 Sheet 需要的 max-height/padding/捲動樣式（貓咪數量多時內容可能超過畫面高度）。 */
-.overview-sheet-panel {
+.allcats-stats-panel {
   max-height: 72vh;
   padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
   overflow-y: auto;
 }
 
-.overview-sheet-panel h2 {
+.allcats-stats-panel h2 {
   font-size: 1.1rem;
   margin: 0 0 14px;
 }
@@ -136,13 +133,13 @@ function handleSelect(catId: number) {
   color: #B3432F;
 }
 
-.overview-list {
+.stats-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.overview-row {
+.stats-row {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -152,17 +149,17 @@ function handleSelect(catId: number) {
   transition: background 0.15s ease;
 }
 
-.overview-row:hover,
-.overview-row:focus-visible {
+.stats-row:hover,
+.stats-row:focus-visible {
   background: var(--paper);
   outline: none;
 }
 
-.overview-row.active {
+.stats-row.active {
   background: var(--water-soft);
 }
 
-.overview-row .name {
+.stats-row .name {
   font-family: var(--font-heading);
   font-weight: 600;
   font-size: 0.9rem;

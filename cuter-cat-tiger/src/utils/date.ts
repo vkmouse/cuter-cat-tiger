@@ -6,7 +6,7 @@
 // 與使用者瀏覽器所在時區無關。
 //
 // 這個檔案是唯一定義來源，composables/useRecords.ts、composables/useDailyStats.ts、
-// components/record/DateNav.vue 都應呼叫這裡，不要各自重算。
+// components/nav/DateNav.vue 都應呼叫這裡，不要各自重算。
 
 const UTC8_OFFSET_MS = 8 * 60 * 60 * 1000
 const DAY_MS = 24 * 60 * 60 * 1000

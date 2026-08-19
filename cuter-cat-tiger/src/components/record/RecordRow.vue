@@ -2,11 +2,8 @@
 import { computed } from 'vue'
 import type { CatRecord } from '../../types'
 import { formatTimeLabel } from '../../utils/date'
+import { round1 } from '../../utils/number'
 import RecordTypeIcon from './RecordTypeIcon.vue'
-
-function round1(n: number): number {
-  return Math.round(n * 10) / 10
-}
 
 const props = defineProps<{
   record: CatRecord

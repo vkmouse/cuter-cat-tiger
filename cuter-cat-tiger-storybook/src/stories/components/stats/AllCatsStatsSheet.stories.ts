@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import OverviewSheet from '../../../../../cuter-cat-tiger/src/components/record/OverviewSheet.vue'
+import AllCatsStatsSheet from '../../../../../cuter-cat-tiger/src/components/stats/AllCatsStatsSheet.vue'
 import type { DailyStat } from '../../../../../cuter-cat-tiger/src/types'
 
 function makeStat(overrides: Partial<DailyStat> & Pick<DailyStat, 'catId' | 'name'>): DailyStat {
@@ -16,8 +16,8 @@ function makeStat(overrides: Partial<DailyStat> & Pick<DailyStat, 'catId' | 'nam
 }
 
 const meta = {
-  title: 'Record/OverviewSheet',
-  component: OverviewSheet,
+  title: 'Stats/AllCatsStatsSheet',
+  component: AllCatsStatsSheet,
   tags: ['autodocs'],
   argTypes: {
     open: {
@@ -47,7 +47,7 @@ const meta = {
     cancel: { action: 'cancel' },
     selectCat: { action: 'selectCat' },
   },
-} satisfies Meta<typeof OverviewSheet>
+} satisfies Meta<typeof AllCatsStatsSheet>
 
 export default meta
 

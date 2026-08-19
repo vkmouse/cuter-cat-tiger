@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import AddCatSheet from '../../../../../cuter-cat-tiger/src/components/record/AddCatSheet.vue'
+import AddCatSheet from '../../../../../cuter-cat-tiger/src/components/cat/AddCatSheet.vue'
 
 const meta = {
-  title: 'Record/AddCatSheet',
+  title: 'Cat/AddCatSheet',
   component: AddCatSheet,
   tags: ['autodocs'],
   argTypes: {

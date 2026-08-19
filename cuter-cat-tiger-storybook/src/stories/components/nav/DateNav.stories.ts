@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import DateNav from '../../../../../cuter-cat-tiger/src/components/record/DateNav.vue'
+import DateNav from '../../../../../cuter-cat-tiger/src/components/nav/DateNav.vue'
 
 const meta = {
-  title: 'Record/DateNav',
+  title: 'Nav/DateNav',
   component: DateNav,
   tags: ['autodocs'],
   argTypes: {
@@ -13,7 +13,7 @@ const meta = {
     },
     prevDay: { action: 'prevDay' },
     nextDay: { action: 'nextDay' },
-    openOverview: { action: 'openOverview' },
+    openAllCatsStats: { action: 'openAllCatsStats' },
   },
 } satisfies Meta<typeof DateNav>
 

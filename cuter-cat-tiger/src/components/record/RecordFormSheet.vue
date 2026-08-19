@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { CatRecord, RecordType } from '../../types'
 import { nowDateTimeLocalValue, isoToDateTimeLocalValue } from '../../utils/date'
-import BaseSheet from './BaseSheet.vue'
+import BaseSheet from '../ui/BaseSheet.vue'
 
 const props = defineProps<{
   open: boolean
@@ -55,12 +55,12 @@ const TYPE_EDIT_LABEL: Record<RecordType, string> = {
   poop: '修改大便紀錄',
 }
 
-const title = () => {
+const title = computed(() => {
   const action = props.mode === 'add' ? TYPE_ACTION_LABEL[props.type] : TYPE_EDIT_LABEL[props.type]
   return `${action} · ${props.catName}`
-}
+})
 
-const amountLabel = () => (props.type === 'water' ? '數量 (ml)' : '數量 (g)')
+const amountLabel = computed(() => (props.type === 'water' ? '數量 (ml)' : '數量 (g)'))
 
 function handleSubmit() {
   if (!timeValue.value) return
@@ -75,10 +75,10 @@ function handleSubmit() {
 </script>
 
 <template>
-  <BaseSheet :open="open" :title="title()" @cancel="emit('cancel')">
+  <BaseSheet :open="open" :title="title" @cancel="emit('cancel')">
     <form @submit.prevent="handleSubmit">
       <div v-if="!isLitter(type)" class="field">
-        <label for="fAmount">{{ amountLabel() }}</label>
+        <label for="fAmount">{{ amountLabel }}</label>
         <input id="fAmount" v-model="amount" type="number" inputmode="decimal" step="0.1" min="0" required />
       </div>
       <div class="field">

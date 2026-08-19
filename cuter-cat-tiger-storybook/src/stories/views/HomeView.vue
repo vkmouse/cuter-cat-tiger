@@ -1,18 +1,18 @@
 <script setup lang="ts">
 // Storybook 專用檔案，不屬於正式 app 程式碼，只是刻意跟原始碼同名放在對應的
 // views/ 資料夾下，方便對照：這裡示範的是 cuter-cat-tiger/src/views/HomeView.vue。
-// 目的：把 components/record/ 底下所有元件組裝成跟正式版一樣的畫面，
+// 目的：把 components/ 底下所有元件組裝成跟正式版一樣的畫面，
 // 但用記憶體內的假資料 + setTimeout 模擬延遲取代真實 API（useCats/useRecords/...），
 // 讓 Storybook 裡可以真的點擊新增/編輯/刪除紀錄、切換貓咪、切換日期、看多貓總覽。
 import { computed, reactive, ref, watch } from 'vue'
-import CatTabs from '../../../../cuter-cat-tiger/src/components/record/CatTabs.vue'
-import DateNav from '../../../../cuter-cat-tiger/src/components/record/DateNav.vue'
-import DailyStats from '../../../../cuter-cat-tiger/src/components/record/DailyStats.vue'
+import CatTabs from '../../../../cuter-cat-tiger/src/components/cat/CatTabs.vue'
+import AddCatSheet from '../../../../cuter-cat-tiger/src/components/cat/AddCatSheet.vue'
+import DateNav from '../../../../cuter-cat-tiger/src/components/nav/DateNav.vue'
+import DailyStats from '../../../../cuter-cat-tiger/src/components/stats/DailyStats.vue'
+import AllCatsStatsSheet from '../../../../cuter-cat-tiger/src/components/stats/AllCatsStatsSheet.vue'
 import RecordList from '../../../../cuter-cat-tiger/src/components/record/RecordList.vue'
 import RecordFormSheet from '../../../../cuter-cat-tiger/src/components/record/RecordFormSheet.vue'
-import AddCatSheet from '../../../../cuter-cat-tiger/src/components/record/AddCatSheet.vue'
-import ConfirmSheet from '../../../../cuter-cat-tiger/src/components/record/ConfirmSheet.vue'
-import OverviewSheet from '../../../../cuter-cat-tiger/src/components/record/OverviewSheet.vue'
+import ConfirmSheet from '../../../../cuter-cat-tiger/src/components/ui/ConfirmSheet.vue'
 import { addDaysToDateKey, dateKeyFromIso, dateTimeLocalValueToIso, todayDateKey } from '../../../../cuter-cat-tiger/src/utils/date'
 import type { Cat, CatRecord, DailyStat, RecordType } from '../../../../cuter-cat-tiger/src/types'
 
@@ -35,7 +35,7 @@ function seedRecords(): CatRecord[] {
     { id: 2, catId: 1, type: 'food', amount: 30, unit: 'g', note: null, occurredAt: hoursAgoIso(3), updatedAt: null },
     { id: 3, catId: 1, type: 'pee', amount: 0, unit: '', note: null, occurredAt: hoursAgoIso(5), updatedAt: null },
     { id: 4, catId: 1, type: 'poop', amount: 0, unit: '', note: '軟便，觀察看看', occurredAt: hoursAgoIso(7), updatedAt: null },
-    // 小黑：水量刻意偏低，用來示範 OverviewSheet「今日喝水較少」標記
+    // 小黑：水量刻意偏低，用來示範 AllCatsStatsSheet「今日喝水較少」標記
     { id: 5, catId: 2, type: 'water', amount: 20, unit: 'ml', note: null, occurredAt: hoursAgoIso(2), updatedAt: null },
     { id: 6, catId: 2, type: 'pee', amount: 0, unit: '', note: null, occurredAt: hoursAgoIso(4), updatedAt: null },
     // 奶油：水量/飼料量偏高，尿尿兩次
@@ -115,62 +115,62 @@ const peeCount = computed(() => activeCatStat.value?.peeCount ?? 0)
 const poopCount = computed(() => activeCatStat.value?.poopCount ?? 0)
 
 // ---------- 多貓總覽底部抽屜 ----------
-const overviewOpen = ref(false)
+const allCatsStatsOpen = ref(false)
 const allCatsStats = ref<DailyStat[]>([])
 const allCatsStatsLoading = ref(false)
 
-function openOverview() {
-  overviewOpen.value = true
+function openAllCatsStats() {
+  allCatsStatsOpen.value = true
   allCatsStatsLoading.value = true
   setTimeout(() => {
     allCatsStats.value = statsForDate(selectedDate.value)
     allCatsStatsLoading.value = false
   }, 300)
 }
-function closeOverview() {
-  overviewOpen.value = false
+function closeAllCatsStats() {
+  allCatsStatsOpen.value = false
 }
-function handleOverviewSelectCat(catId: number) {
+function handleAllCatsStatsSelectCat(catId: number) {
   activeCatId.value = catId
-  closeOverview()
+  closeAllCatsStats()
 }
 
 // ---------- 新增/編輯紀錄底部抽屜 ----------
-const sheetOpen = ref(false)
-const sheetMode = ref<'add' | 'edit'>('add')
-const sheetType = ref<RecordType>('water')
+const recordSheetOpen = ref(false)
+const recordSheetMode = ref<'add' | 'edit'>('add')
+const recordSheetType = ref<RecordType>('water')
 const editingRecord = ref<CatRecord | null>(null)
 const saving = ref(false)
 
-function openAdd(type: RecordType) {
-  sheetMode.value = 'add'
-  sheetType.value = type
+function openAddRecord(type: RecordType) {
+  recordSheetMode.value = 'add'
+  recordSheetType.value = type
   editingRecord.value = null
-  sheetOpen.value = true
+  recordSheetOpen.value = true
 }
-function openEdit(record: CatRecord) {
-  sheetMode.value = 'edit'
-  sheetType.value = record.type
+function openEditRecord(record: CatRecord) {
+  recordSheetMode.value = 'edit'
+  recordSheetType.value = record.type
   editingRecord.value = record
-  sheetOpen.value = true
+  recordSheetOpen.value = true
 }
-function closeSheet() {
-  sheetOpen.value = false
+function closeRecordSheet() {
+  recordSheetOpen.value = false
 }
 
-function handleSave(payload: { amount?: number; timeValue: string; note: string }) {
+function handleRecordSave(payload: { amount?: number; timeValue: string; note: string }) {
   const occurredAt = dateTimeLocalValueToIso(payload.timeValue)
-  const isLitter = sheetType.value === 'pee' || sheetType.value === 'poop'
+  const isLitter = recordSheetType.value === 'pee' || recordSheetType.value === 'poop'
   saving.value = true
   setTimeout(() => {
-    if (sheetMode.value === 'add') {
+    if (recordSheetMode.value === 'add') {
       if (activeCatId.value != null) {
         records.push({
           id: nextRecordId++,
           catId: activeCatId.value,
-          type: sheetType.value,
+          type: recordSheetType.value,
           amount: isLitter ? 0 : (payload.amount ?? 0),
-          unit: isLitter ? '' : sheetType.value === 'water' ? 'ml' : 'g',
+          unit: isLitter ? '' : recordSheetType.value === 'water' ? 'ml' : 'g',
           note: payload.note || null,
           occurredAt,
           updatedAt: null,
@@ -186,19 +186,19 @@ function handleSave(payload: { amount?: number; timeValue: string; note: string 
       }
     }
     saving.value = false
-    closeSheet()
+    closeRecordSheet()
   }, 400)
 }
 
 // ---------- 新增貓咪抽屜 ----------
-const addCatSheetOpen = ref(false)
+const addCatOpen = ref(false)
 const addingCat = ref(false)
 
-function openAddCatSheet() {
-  addCatSheetOpen.value = true
+function openAddCat() {
+  addCatOpen.value = true
 }
-function closeAddCatSheet() {
-  addCatSheetOpen.value = false
+function closeAddCat() {
+  addCatOpen.value = false
 }
 function handleAddCatSave(name: string) {
   addingCat.value = true
@@ -207,7 +207,7 @@ function handleAddCatSave(name: string) {
     cats.push(cat)
     activeCatId.value = cat.id
     addingCat.value = false
-    closeAddCatSheet()
+    closeAddCat()
   }, 400)
 }
 
@@ -243,10 +243,10 @@ function resetDemo() {
   nextRecordId = 100
   activeCatId.value = cats[0]?.id ?? null
   selectedDate.value = todayDateKey()
-  sheetOpen.value = false
-  addCatSheetOpen.value = false
+  recordSheetOpen.value = false
+  addCatOpen.value = false
   deleteConfirmOpen.value = false
-  overviewOpen.value = false
+  allCatsStatsOpen.value = false
 }
 </script>
 
@@ -257,57 +257,57 @@ function resetDemo() {
       <button type="button" class="reset-btn" @click="resetDemo">重置示範資料</button>
     </div>
 
-    <CatTabs :cats="cats" :active-cat-id="activeCatId" @select="(id) => (activeCatId = id)" @add-cat="openAddCatSheet" />
+    <CatTabs :cats="cats" :active-cat-id="activeCatId" @select="(id) => (activeCatId = id)" @add-cat="openAddCat" />
 
     <div class="card">
-      <DateNav :date="selectedDate" @prev-day="goPrevDay" @next-day="goNextDay" @open-overview="openOverview" />
+      <DateNav :date="selectedDate" @prev-day="goPrevDay" @next-day="goNextDay" @open-all-cats-stats="openAllCatsStats" />
 
       <DailyStats :water-ml="waterMl" :food-g="foodG" :pee-count="peeCount" :poop-count="poopCount" :loading="statsLoading" />
 
       <div class="quick-add">
-        <button class="stamp-btn water" :disabled="!activeCatId" @click="openAdd('water')">
+        <button class="stamp-btn water" :disabled="!activeCatId" @click="openAddRecord('water')">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c4.2 5 7 8.6 7 12.2A7 7 0 1 1 5 15.2C5 11.6 7.8 8 12 3z" /></svg>
           記錄喝水
         </button>
-        <button class="stamp-btn food" :disabled="!activeCatId" @click="openAdd('food')">
+        <button class="stamp-btn food" :disabled="!activeCatId" @click="openAddRecord('food')">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16" /><path d="M5 11a7 6.2 0 0 0 14 0" /><path d="M9 11c.4-1.8 1.4-2.8 3-2.8s2.6 1 3 2.8" /></svg>
           記錄飼料
         </button>
-        <button class="stamp-btn litter" :disabled="!activeCatId" @click="openAdd('pee')">
+        <button class="stamp-btn litter" :disabled="!activeCatId" @click="openAddRecord('pee')">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4c2.6 3.2 4.4 5.6 4.4 8.2A4.4 4.4 0 1 1 7.6 12.2C7.6 9.6 9.4 7.2 12 4z" /><circle cx="12" cy="13" r="1.4" /></svg>
           記錄尿尿
         </button>
-        <button class="stamp-btn litter" :disabled="!activeCatId" @click="openAdd('poop')">
+        <button class="stamp-btn litter" :disabled="!activeCatId" @click="openAddRecord('poop')">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c-4.4 0-7-1.4-7-3.4 0-1.3 1-2.1 2.3-2.5-.6-.6-1-1.4-1-2.3 0-1.7 1.5-2.9 3.2-2.8-.2-.5-.3-1-.3-1.6 0-1.9 1.6-3.4 3.5-3.4 1.7 0 3.1 1.2 3.4 2.8 1.6 0 2.9 1.2 2.9 2.7 0 .8-.3 1.5-.9 2 1.3.4 2.3 1.3 2.3 2.6 0 2-2.6 3.4-7 3.4-.5.3-1 .5-1.4.5s-.9-.2-1-.5z" /></svg>
           記錄大便
         </button>
       </div>
 
-      <RecordList :records="filteredRecords" :loading="recordsLoading" error="" @edit="openEdit" @remove="openDeleteConfirm" />
+      <RecordList :records="filteredRecords" :loading="recordsLoading" error="" @edit="openEditRecord" @remove="openDeleteConfirm" />
     </div>
 
     <RecordFormSheet
-      :open="sheetOpen"
-      :mode="sheetMode"
-      :type="sheetType"
+      :open="recordSheetOpen"
+      :mode="recordSheetMode"
+      :type="recordSheetType"
       :cat-name="activeCatName"
       :record="editingRecord"
       :saving="saving"
-      @cancel="closeSheet"
-      @save="handleSave"
+      @cancel="closeRecordSheet"
+      @save="handleRecordSave"
     />
 
-    <AddCatSheet :open="addCatSheetOpen" :saving="addingCat" @cancel="closeAddCatSheet" @save="handleAddCatSave" />
+    <AddCatSheet :open="addCatOpen" :saving="addingCat" @cancel="closeAddCat" @save="handleAddCatSave" />
 
-    <OverviewSheet
-      :open="overviewOpen"
+    <AllCatsStatsSheet
+      :open="allCatsStatsOpen"
       :date="selectedDate"
       :stats="allCatsStats"
       :active-cat-id="activeCatId"
       :loading="allCatsStatsLoading"
       error=""
-      @cancel="closeOverview"
-      @select-cat="handleOverviewSelectCat"
+      @cancel="closeAllCatsStats"
+      @select-cat="handleAllCatsStatsSelectCat"
     />
 
     <ConfirmSheet

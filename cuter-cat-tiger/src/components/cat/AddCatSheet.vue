@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
-import BaseSheet from './BaseSheet.vue'
+import BaseSheet from '../ui/BaseSheet.vue'
 
 const props = defineProps<{
   open: boolean

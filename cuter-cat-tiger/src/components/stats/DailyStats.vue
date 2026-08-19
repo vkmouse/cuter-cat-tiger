@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { round1 } from '../../utils/number'
+
 defineProps<{
   waterMl: number
   foodG: number
@@ -6,10 +8,6 @@ defineProps<{
   poopCount: number
   loading?: boolean
 }>()
-
-function round1(n: number): number {
-  return Math.round(n * 10) / 10
-}
 </script>
 
 <template>
