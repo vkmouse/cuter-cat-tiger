@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
+import BaseSheet from './BaseSheet.vue'
 
 const props = defineProps<{
   open: boolean
@@ -32,10 +33,7 @@ function handleSubmit() {
 </script>
 
 <template>
-  <div class="sheet-backdrop" :class="{ show: open }" @click="emit('cancel')" />
-  <div class="sheet-panel" :class="{ show: open }" role="dialog" aria-modal="true" aria-labelledby="addCatSheetTitle">
-    <div class="sheet-handle" aria-hidden="true" />
-    <h2 id="addCatSheetTitle">新增貓咪</h2>
+  <BaseSheet :open="open" title="新增貓咪" @cancel="emit('cancel')">
     <form @submit.prevent="handleSubmit">
       <div class="field">
         <label for="fCatName">貓咪名字</label>
@@ -48,5 +46,5 @@ function handleSubmit() {
         </button>
       </div>
     </form>
-  </div>
+  </BaseSheet>
 </template>

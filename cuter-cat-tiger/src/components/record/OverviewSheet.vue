@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { formatDateLabel, formatSinceLabel } from '../../utils/date'
 import type { DailyStat } from '../../types'
+import RecordTypeIcon from './RecordTypeIcon.vue'
+import BaseSheet from './BaseSheet.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -51,11 +53,13 @@ function handleSelect(catId: number) {
 </script>
 
 <template>
-  <div class="sheet-backdrop sheet-backdrop--elevated" :class="{ show: open }" @click="emit('cancel')" />
-  <div class="sheet-panel sheet-panel--elevated overview-sheet" :class="{ show: open }" role="dialog" aria-modal="true" aria-labelledby="overviewSheetTitle">
-    <div class="sheet-handle" aria-hidden="true" />
-    <h2 id="overviewSheetTitle">今日總覽 · {{ formatDateLabel(date) }}</h2>
-
+  <BaseSheet
+    :open="open"
+    :title="`今日總覽 · ${formatDateLabel(date)}`"
+    elevated
+    panel-class="overview-sheet-panel"
+    @cancel="emit('cancel')"
+  >
     <div v-if="loading" class="state-msg">載入中…</div>
     <div v-else-if="error" class="state-msg error">{{ error }}</div>
     <div v-else-if="stats.length === 0" class="state-msg">還沒有貓咪資料。</div>
@@ -90,33 +94,37 @@ function handleSelect(catId: number) {
           </div>
           <div class="litter-row">
             <span class="litter-item">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4c2.6 3.2 4.4 5.6 4.4 8.2A4.4 4.4 0 1 1 7.6 12.2C7.6 9.6 9.4 7.2 12 4z" /><circle cx="12" cy="13" r="1.4" /></svg>
+              <RecordTypeIcon type="pee" :size="12" />
               尿尿 {{ stat.peeCount }} 次 · <span class="since">{{ formatSinceLabel(stat.lastPeeAt) }}</span>
             </span>
             <span class="litter-item">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c-4.4 0-7-1.4-7-3.4 0-1.3 1-2.1 2.3-2.5-.6-.6-1-1.4-1-2.3 0-1.7 1.5-2.9 3.2-2.8-.2-.5-.3-1-.3-1.6 0-1.9 1.6-3.4 3.5-3.4 1.7 0 3.1 1.2 3.4 2.8 1.6 0 2.9 1.2 2.9 2.7 0 .8-.3 1.5-.9 2 1.3.4 2.3 1.3 2.3 2.6 0 2-2.6 3.4-7 3.4-.5.3-1 .5-1.4.5s-.9-.2-1-.5z" /></svg>
+              <RecordTypeIcon type="poop" :size="12" />
               大便 {{ stat.poopCount }} 次 · <span class="since">{{ formatSinceLabel(stat.lastPoopAt) }}</span>
             </span>
           </div>
         </div>
       </li>
     </ul>
-  </div>
+  </BaseSheet>
 </template>
 
-<style scoped>
-/* 貓咪數量多時內容可能超過畫面高度，限制 max-height 並可捲動 */
-.overview-sheet {
+<style>
+/* 不能加 scoped：sheet-panel 是 BaseSheet 的 root 元素，scoped CSS 的 data-v 屬性
+   碰不到子元件內部渲染出來的節點。這裡改用專屬且不易撞名的 class，
+   只調整這個 Sheet 需要的 max-height/padding/捲動樣式（貓咪數量多時內容可能超過畫面高度）。 */
+.overview-sheet-panel {
   max-height: 72vh;
   padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
   overflow-y: auto;
 }
 
-.overview-sheet h2 {
+.overview-sheet-panel h2 {
   font-size: 1.1rem;
   margin: 0 0 14px;
 }
+</style>
 
+<style scoped>
 .state-msg {
   color: var(--ink-soft);
   font-size: 0.85rem;

@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import type { CatRecord, RecordType } from '../../types'
 import { nowDateTimeLocalValue, isoToDateTimeLocalValue } from '../../utils/date'
+import BaseSheet from './BaseSheet.vue'
 
 const props = defineProps<{
   open: boolean
@@ -74,10 +75,7 @@ function handleSubmit() {
 </script>
 
 <template>
-  <div class="sheet-backdrop" :class="{ show: open }" @click="emit('cancel')" />
-  <div class="sheet-panel" :class="{ show: open }" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-    <div class="sheet-handle" aria-hidden="true" />
-    <h2 id="sheetTitle">{{ title() }}</h2>
+  <BaseSheet :open="open" :title="title()" @cancel="emit('cancel')">
     <form @submit.prevent="handleSubmit">
       <div v-if="!isLitter(type)" class="field">
         <label for="fAmount">{{ amountLabel() }}</label>
@@ -98,7 +96,7 @@ function handleSubmit() {
         </button>
       </div>
     </form>
-  </div>
+  </BaseSheet>
 </template>
 
 <style scoped>

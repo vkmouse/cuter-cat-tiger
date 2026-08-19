@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BaseSheet from './BaseSheet.vue'
+
 withDefaults(
   defineProps<{
     open: boolean
@@ -25,10 +27,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="sheet-backdrop sheet-backdrop--elevated" :class="{ show: open }" @click="emit('cancel')" />
-  <div class="sheet-panel sheet-panel--elevated confirm-sheet" :class="{ show: open }" role="dialog" aria-modal="true" aria-labelledby="confirmSheetTitle">
-    <div class="sheet-handle" aria-hidden="true" />
-    <h2 id="confirmSheetTitle">{{ title }}</h2>
+  <BaseSheet :open="open" :title="title" elevated panel-class="confirm-sheet-panel" @cancel="emit('cancel')">
     <p v-if="message" class="message">{{ message }}</p>
     <div class="sheet-actions">
       <button type="button" class="btn ghost" @click="emit('cancel')">{{ cancelText }}</button>
@@ -36,14 +35,18 @@ const emit = defineEmits<{
         {{ saving ? '處理中…' : confirmText }}
       </button>
     </div>
-  </div>
+  </BaseSheet>
 </template>
 
-<style scoped>
-.confirm-sheet h2 {
+<style>
+/* 不能加 scoped：原因同 OverviewSheet，h2 現在是 BaseSheet 的內部節點，
+   scoped CSS 碰不到，這裡只是把原本的 8px 標題間距用專屬 class 保留下來。 */
+.confirm-sheet-panel h2 {
   margin: 0 0 8px;
 }
+</style>
 
+<style scoped>
 .message {
   font-size: 0.88rem;
   color: var(--ink-soft);
