@@ -161,6 +161,24 @@ function handleSubmit() {
   outline-offset: 1px;
 }
 
+/* iOS Safari 會用自己的樣式渲染 datetime-local，文字置中且內距跟其他欄位不同，
+   導致跑版，這裡強制文字靠左、統一高度，讓它跟其他輸入框看起來一致 */
+.field input[type='datetime-local'] {
+  min-height: 40px;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.field input[type='datetime-local']::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+
+.field input[type='datetime-local']::-webkit-datetime-edit {
+  text-align: left;
+  padding: 0;
+}
+
 .field textarea {
   resize: none;
   min-height: 54px;
