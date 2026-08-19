@@ -12,10 +12,13 @@ const INIT_STATEMENTS = [
      name       TEXT NOT NULL,
      created_at TEXT NOT NULL DEFAULT (datetime('now'))
    )`,
+  // type 故意不加 CHECK 約束：SQLite/D1 無法直接 ALTER 掉既有 CHECK，
+  // 為了讓舊資料庫加 pee/poop 不需要跑遷移重建表，合法值完全交給後端 requireRecordType 驗證。
+  // amount/unit 維持 NOT NULL：pee/poop 這種不量化的類型固定存 0 / ''，不需要開放 NULL。
   `CREATE TABLE IF NOT EXISTS records (
      id          INTEGER PRIMARY KEY AUTOINCREMENT,
      cat_id      INTEGER NOT NULL REFERENCES cats(id) ON DELETE CASCADE,
-     type        TEXT NOT NULL CHECK (type IN ('water', 'food')),
+     type        TEXT NOT NULL,
      amount      REAL NOT NULL,
      unit        TEXT NOT NULL,
      note        TEXT,

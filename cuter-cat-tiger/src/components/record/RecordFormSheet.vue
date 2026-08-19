@@ -14,12 +14,15 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   cancel: []
-  save: [payload: { amount: number; timeValue: string; note: string }]
+  save: [payload: { amount?: number; timeValue: string; note: string }]
 }>()
 
 const amount = ref('')
 const timeValue = ref('')
 const note = ref('')
+
+// pee/poop 不量化，表單不需要「數量」欄位（litter-record-spec.md 第4節）
+const isLitter = (t: RecordType) => t === 'pee' || t === 'poop'
 
 watch(
   () => props.open,
@@ -38,17 +41,34 @@ watch(
   { immediate: true },
 )
 
+const TYPE_ACTION_LABEL: Record<RecordType, string> = {
+  water: '記錄喝水',
+  food: '記錄飼料',
+  pee: '記錄尿尿',
+  poop: '記錄大便',
+}
+const TYPE_EDIT_LABEL: Record<RecordType, string> = {
+  water: '修改喝水紀錄',
+  food: '修改飼料紀錄',
+  pee: '修改尿尿紀錄',
+  poop: '修改大便紀錄',
+}
+
 const title = () => {
-  const action = props.mode === 'add' ? (props.type === 'water' ? '記錄喝水' : '記錄飼料') : props.type === 'water' ? '修改喝水紀錄' : '修改飼料紀錄'
+  const action = props.mode === 'add' ? TYPE_ACTION_LABEL[props.type] : TYPE_EDIT_LABEL[props.type]
   return `${action} · ${props.catName}`
 }
 
 const amountLabel = () => (props.type === 'water' ? '數量 (ml)' : '數量 (g)')
 
 function handleSubmit() {
+  if (!timeValue.value) return
+  if (isLitter(props.type)) {
+    emit('save', { timeValue: timeValue.value, note: note.value.trim() })
+    return
+  }
   const n = parseFloat(amount.value)
   if (Number.isNaN(n) || n < 0) return
-  if (!timeValue.value) return
   emit('save', { amount: n, timeValue: timeValue.value, note: note.value.trim() })
 }
 </script>
@@ -59,7 +79,7 @@ function handleSubmit() {
     <div class="sheet-handle" aria-hidden="true" />
     <h2 id="sheetTitle">{{ title() }}</h2>
     <form @submit.prevent="handleSubmit">
-      <div class="field">
+      <div v-if="!isLitter(type)" class="field">
         <label for="fAmount">{{ amountLabel() }}</label>
         <input id="fAmount" v-model="amount" type="number" step="0.1" min="0" required />
       </div>
@@ -73,7 +93,7 @@ function handleSubmit() {
       </div>
       <div class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
-        <button type="submit" class="btn primary" :class="{ food: type === 'food' }" :disabled="saving">
+        <button type="submit" class="btn primary" :class="{ food: type === 'food', litter: isLitter(type) }" :disabled="saving">
           {{ saving ? '儲存中…' : '儲存' }}
         </button>
       </div>

@@ -99,3 +99,29 @@ export function formatTimeLabel(iso: string): string {
   const s = toUtc8Shifted(new Date(iso))
   return `${pad(s.getUTCHours())}:${pad(s.getUTCMinutes())}`
 }
+
+const MINUTE_MS = 60 * 1000
+const HOUR_MS = 60 * MINUTE_MS
+
+/**
+ * 「距離上次多久」的顯示文字，用於多貓總覽抽屜的 lastPeeAt/lastPoopAt。
+ * 設計決策（見 litter-record-spec.md 第 5 節）：只取單一最合適的單位，不同時列出多個單位。
+ *   - < 1 小時 → 分鐘
+ *   - < 24 小時 → 小時
+ *   - ≥ 24 小時 → 天
+ * 皆無條件捨去到整數；null（從未記錄過）回傳「尚無紀錄」。
+ * 這裡吃 ISO 字串直接跟「現在」比較即可，不像 dateKey 系列函式需要換算 UTC+8 當天邊界——
+ * 「幾小時/幾天前」是連續的時間差，跟日期換日不受時區影響。
+ */
+export function formatSinceLabel(iso: string | null): string {
+  if (!iso) return '尚無紀錄'
+  const diffMs = Date.now() - new Date(iso).getTime()
+  if (diffMs < HOUR_MS) {
+    const minutes = Math.max(0, Math.floor(diffMs / MINUTE_MS))
+    return `${minutes} 分鐘前`
+  }
+  if (diffMs < 24 * HOUR_MS) {
+    return `${Math.floor(diffMs / HOUR_MS)} 小時前`
+  }
+  return `${Math.floor(diffMs / (24 * HOUR_MS))} 天前`
+}

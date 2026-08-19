@@ -3,6 +3,7 @@ import * as recordRepository from '../repositories/recordRepository.js'
 import type { RecordRow, UpdateRecordInput } from '../repositories/recordRepository.js'
 import {
   ApiError,
+  isQuantifiedType,
   parseJsonBody,
   requireDateParam,
   requireFiniteNumber,
@@ -18,7 +19,7 @@ import { sqliteUtcToIso } from '../utils/datetime.js'
 export interface RecordDto {
   id: number
   catId: number
-  type: 'water' | 'food'
+  type: 'water' | 'food' | 'pee' | 'poop'
   amount: number
   unit: string
   note: string | null
@@ -67,8 +68,18 @@ export async function createRecord(db: D1Database, request: Request): Promise<Re
 
   const catId = requirePositiveInt(body.catId, 'catId')
   const type = requireRecordType(body.type)
-  const amount = requireAmount(body.amount)
-  const unit = requireUnitForType(type, body.unit)
+
+  // pee/poop 不量化：即使 client 手滑帶了 amount/unit 也安靜忽略，一律強制存 0 / ''。
+  let amount: number
+  let unit: string
+  if (isQuantifiedType(type)) {
+    amount = requireAmount(body.amount)
+    unit = requireUnitForType(type, body.unit)
+  } else {
+    amount = 0
+    unit = ''
+  }
+
   const note = body.note === undefined || body.note === null ? null : String(body.note)
   const occurredAt = optionalIsoDateTime(body.occurredAt, 'occurredAt') ?? new Date().toISOString()
 
@@ -102,12 +113,15 @@ export async function updateRecord(
 
   const patch: UpdateRecordInput = {}
 
-  if (body.amount !== undefined) {
-    patch.amount = requireAmount(body.amount)
-  }
-  if (body.unit !== undefined) {
-    // type 不可改，unit 若要改也必須維持與既有 type 對應（water → ml, food → g）
-    patch.unit = requireUnitForType(existing.type, body.unit)
+  // pee/poop 不量化：amount/unit 永遠是 0 / ''，即使 body 帶了值也安靜忽略，不寫入 patch。
+  if (isQuantifiedType(existing.type)) {
+    if (body.amount !== undefined) {
+      patch.amount = requireAmount(body.amount)
+    }
+    if (body.unit !== undefined) {
+      // type 不可改，unit 若要改也必須維持與既有 type 對應（water → ml, food → g）
+      patch.unit = requireUnitForType(existing.type, body.unit)
+    }
   }
   if (body.note !== undefined) {
     patch.note = body.note === null ? null : String(body.note)

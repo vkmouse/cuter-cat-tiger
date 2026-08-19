@@ -63,23 +63,32 @@ export function parseIdParam(raw: string | undefined, field = 'id'): number {
   return requirePositiveInt(raw, field)
 }
 
-export type RecordType = 'water' | 'food'
-export type RecordUnit = 'ml' | 'g'
+export type RecordType = 'water' | 'food' | 'pee' | 'poop'
+export type RecordUnit = 'ml' | 'g' | ''
+
+/** 有數量概念的類型（喝水/飼料），如廁類型（pee/poop）不量化，amount/unit 一律存 0 / ''。 */
+export const QUANTIFIED_RECORD_TYPES: RecordType[] = ['water', 'food']
+
+export function isQuantifiedType(type: RecordType): type is 'water' | 'food' {
+  return type === 'water' || type === 'food'
+}
 
 export const RECORD_TYPE_UNIT: Record<RecordType, RecordUnit> = {
   water: 'ml',
   food: 'g',
+  pee: '',
+  poop: '',
 }
 
 export function requireRecordType(value: unknown): RecordType {
-  if (value !== 'water' && value !== 'food') {
-    throw new ApiError(400, "type 僅接受 'water' 或 'food'")
+  if (value !== 'water' && value !== 'food' && value !== 'pee' && value !== 'poop') {
+    throw new ApiError(400, "type 僅接受 'water'、'food'、'pee' 或 'poop'")
   }
   return value
 }
 
-/** 驗證 unit 是否與 type 對應。 */
-export function requireUnitForType(type: RecordType, unit: unknown): RecordUnit {
+/** 驗證 unit 是否與 type 對應。僅用於 water/food；pee/poop 不呼叫這個函式，直接固定存 ''。 */
+export function requireUnitForType(type: 'water' | 'food', unit: unknown): RecordUnit {
   const expected = RECORD_TYPE_UNIT[type]
   if (unit !== expected) {
     throw new ApiError(400, `type 為 '${type}' 時，unit 必須為 '${expected}'`)

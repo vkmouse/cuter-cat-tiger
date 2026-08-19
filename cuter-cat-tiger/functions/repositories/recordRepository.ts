@@ -6,7 +6,7 @@
 export interface RecordRow {
   id: number
   cat_id: number
-  type: 'water' | 'food'
+  type: 'water' | 'food' | 'pee' | 'poop'
   amount: number
   unit: string
   note: string | null
@@ -17,7 +17,7 @@ export interface RecordRow {
 
 export interface InsertRecordInput {
   cat_id: number
-  type: 'water' | 'food'
+  type: 'water' | 'food' | 'pee' | 'poop'
   amount: number
   unit: string
   note: string | null
@@ -129,20 +129,47 @@ export async function deleteRecord(db: D1Database, id: number): Promise<boolean>
 
 export interface DailySumRow {
   cat_id: number
-  type: 'water' | 'food'
+  type: 'water' | 'food' | 'pee' | 'poop'
   total: number
+  count: number
 }
 
-/** 指定 UTC+8 日期、所有貓咪的 water/food 總量（groupby cat_id, type），沒有紀錄的組合不會出現在結果中。 */
+/**
+ * 指定 UTC+8 日期、所有貓咪各 type 的當日總量與次數（groupby cat_id, type）。
+ * water/food 用 total（SUM(amount)）；pee/poop 用 count（次數，amount 恆為 0 沒有意義）。
+ * 沒有紀錄的組合不會出現在結果中。
+ */
 export async function sumAmountsByDate(db: D1Database, date: string): Promise<DailySumRow[]> {
   const { results } = await db
     .prepare(
-      `SELECT cat_id, type, SUM(amount) AS total
+      `SELECT cat_id, type, SUM(amount) AS total, COUNT(*) AS count
        FROM records
        WHERE date(datetime(occurred_at, '+8 hours')) = ?
        GROUP BY cat_id, type`,
     )
     .bind(date)
     .all<DailySumRow>()
+  return results
+}
+
+export interface LastOccurredRow {
+  cat_id: number
+  type: 'pee' | 'poop'
+  last_occurred_at: string
+}
+
+/**
+ * 每隻貓咪最後一筆 pee/poop 的時間，「不分日期」，取全部歷史裡最新的一筆。
+ * 用於「多貓總覽」的「距離上次多久」，跟 sumAmountsByDate 的當日限定語意不同，刻意分開成獨立查詢。
+ */
+export async function findLastLitterOccurredAt(db: D1Database): Promise<LastOccurredRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT cat_id, type, MAX(occurred_at) AS last_occurred_at
+       FROM records
+       WHERE type IN ('pee', 'poop')
+       GROUP BY cat_id, type`,
+    )
+    .all<LastOccurredRow>()
   return results
 }

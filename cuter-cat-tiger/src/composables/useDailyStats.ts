@@ -26,6 +26,8 @@ export function useDailyStats(
 
   const waterMl = computed(() => stat.value?.waterMl ?? 0)
   const foodG = computed(() => stat.value?.foodG ?? 0)
+  const peeCount = computed(() => stat.value?.peeCount ?? 0)
+  const poopCount = computed(() => stat.value?.poopCount ?? 0)
   const loading = computed(() => statsQuery.isPending.value)
   const error = computed(() => toErrorMessage(statsQuery.error.value))
 
@@ -33,6 +35,8 @@ export function useDailyStats(
     stat,
     waterMl,
     foodG,
+    peeCount,
+    poopCount,
     loading,
     error,
   }
