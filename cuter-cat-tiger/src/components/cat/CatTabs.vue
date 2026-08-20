@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import type { Cat } from '../../types'
 
-defineProps<{
+const props = defineProps<{
   cats: Cat[]
   activeCatId: number | null
 }>()
@@ -9,7 +10,33 @@ defineProps<{
 const emit = defineEmits<{
   select: [catId: number]
   addCat: []
+  editCat: [catId: number]
 }>()
+
+// 點一下目前已經是 active 的 tab，右上角浮出編輯鈕；再點一下收起（toggle）。
+// 只對 active tab 有效，切到別的 tab 就一律收起。
+const revealEditForId = ref<number | null>(null)
+
+watch(
+  () => props.activeCatId,
+  () => {
+    revealEditForId.value = null
+  },
+)
+
+function handleTabClick(catId: number) {
+  if (catId === props.activeCatId) {
+    revealEditForId.value = revealEditForId.value === catId ? null : catId
+    return
+  }
+  revealEditForId.value = null
+  emit('select', catId)
+}
+
+function handleEditClick(catId: number) {
+  revealEditForId.value = null
+  emit('editCat', catId)
+}
 </script>
 
 <template>
@@ -21,10 +48,20 @@ const emit = defineEmits<{
       :class="{ active: cat.id === activeCatId }"
       role="button"
       tabindex="0"
-      @click="emit('select', cat.id)"
-      @keydown.enter="emit('select', cat.id)"
+      @click="handleTabClick(cat.id)"
+      @keydown.enter="handleTabClick(cat.id)"
     >
       {{ cat.name }}
+      <button
+        v-if="cat.id === activeCatId && revealEditForId === cat.id"
+        type="button"
+        class="edit-cat-btn"
+        aria-label="編輯貓咪"
+        title="編輯貓咪"
+        @click.stop="handleEditClick(cat.id)"
+      >
+        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+      </button>
     </div>
     <button
       type="button"
@@ -80,6 +117,36 @@ const emit = defineEmits<{
   color: var(--ink);
   top: 0;
   box-shadow: 0 -2px 0 var(--water) inset;
+}
+
+/* 點 active tab 浮出的編輯鈕，疊在 tab 右上角。 */
+.edit-cat-btn {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: var(--water);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--card);
+  animation: edit-cat-btn-pop 0.15s ease;
+}
+
+@keyframes edit-cat-btn-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* 新增按鈕刻意弱化，避免搶走目前貓咪的視覺焦點。 */

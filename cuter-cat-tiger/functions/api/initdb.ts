@@ -5,9 +5,11 @@ import { withErrorHandling } from '../utils/validation.js'
 const INIT_STATEMENTS = [
   `PRAGMA foreign_keys = ON`,
   `CREATE TABLE IF NOT EXISTS cats (
-     id         INTEGER PRIMARY KEY AUTOINCREMENT,
-     name       TEXT NOT NULL,
-     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+     id           INTEGER PRIMARY KEY AUTOINCREMENT,
+     name         TEXT NOT NULL,
+     target_water REAL NOT NULL,
+     target_food  REAL NOT NULL,
+     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
    )`,
   // 不在資料庫限制 type，讓既有資料庫能直接支援新增的 pee/poop 類型。
   `CREATE TABLE IF NOT EXISTS records (

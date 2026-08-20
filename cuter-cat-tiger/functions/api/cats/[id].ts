@@ -4,7 +4,7 @@ import { parseIdParam, withErrorHandling } from '../../utils/validation.js'
 
 export const onRequestPatch: PagesFunction<Env> = withErrorHandling(async (context) => {
   const id = parseIdParam(context.params.id as string | undefined)
-  const cat = await catService.renameCat(context.env.DB, id, context.request)
+  const cat = await catService.updateCat(context.env.DB, id, context.request)
   return Response.json(cat)
 })
 

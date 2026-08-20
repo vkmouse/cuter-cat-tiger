@@ -6,6 +6,9 @@ export type RecordUnit = 'ml' | 'g' | ''
 export interface Cat {
   id: number
   name: string
+  // 命名故意不帶單位（不是 targetWaterMl / targetFoodG），跟後端 catService 的 DTO 對齊。
+  targetWater: number
+  targetFood: number
   createdAt: string // ISO, UTC
 }
 
@@ -30,15 +33,22 @@ export interface DailyStat {
   // 不受查詢日期影響，代表全部歷史中的最新時間。
   lastPeeAt: string | null
   lastPoopAt: string | null
+  targetWater: number
+  targetFood: number
 }
 
 
 export interface CreateCatPayload {
   name: string
+  targetWater?: number
+  targetFood?: number
 }
 
 export interface UpdateCatPayload {
-  name: string
+  // PATCH 語意：至少要帶一個欄位，因此三個都是可選。
+  name?: string
+  targetWater?: number
+  targetFood?: number
 }
 
 export interface CreateRecordPayload {

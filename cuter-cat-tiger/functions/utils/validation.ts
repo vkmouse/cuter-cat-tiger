@@ -42,6 +42,14 @@ export function requireFiniteNumber(value: unknown, field: string): number {
   return value
 }
 
+export function requirePositiveNumber(value: unknown, field: string): number {
+  const num = requireFiniteNumber(value, field)
+  if (num <= 0) {
+    throw new ApiError(400, `${field} 必須大於 0`)
+  }
+  return num
+}
+
 export function requirePositiveInt(value: unknown, field: string): number {
   const num = typeof value === 'string' ? Number(value) : value
   if (typeof num !== 'number' || !Number.isInteger(num) || num <= 0) {

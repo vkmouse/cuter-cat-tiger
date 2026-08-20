@@ -26,10 +26,6 @@ const emit = defineEmits<{
   selectCat: [catId: number]
 }>()
 
-// 以當批貓咪的最大值作為基準，方便直接比較彼此的量。
-const maxWater = computed(() => Math.max(1, ...props.stats.map((s) => s.waterMl)))
-const maxFood = computed(() => Math.max(1, ...props.stats.map((s) => s.foodG)))
-
 // 只有存在可比較的差異時才標示最低值，避免單一或同量資料造成誤導。
 const lowestWaterCatId = computed(() => {
   if (props.stats.length < 2) return null
@@ -39,8 +35,13 @@ const lowestWaterCatId = computed(() => {
   return lowest.catId
 })
 
-function pct(value: number, max: number): number {
-  return Math.min(100, Math.round((value / max) * 100))
+// 長條相對「目標值」呈現：達標時整條變成達標色，滿版即代表達標（不再是貓咪之間互相比較）。
+function pct(value: number, target: number): number {
+  return Math.min(100, Math.round((value / Math.max(target, 0.0001)) * 100))
+}
+
+function achieved(value: number, target: number): boolean {
+  return value >= target
 }
 
 function handleSelect(catId: number) {
@@ -78,15 +79,23 @@ function handleSelect(catId: number) {
         <div class="bars">
           <div class="bar-line">
             <div class="bar-track">
-              <div class="bar-fill water" :style="{ width: pct(stat.waterMl, maxWater) + '%' }" />
+              <div
+                class="bar-fill water"
+                :class="{ achieved: achieved(stat.waterMl, stat.targetWater) }"
+                :style="{ width: pct(stat.waterMl, stat.targetWater) + '%' }"
+              />
             </div>
-            <span class="bar-val water">{{ round1(stat.waterMl) }} ml</span>
+            <span class="bar-val water">{{ round1(stat.waterMl) }} / {{ round1(stat.targetWater) }} ml</span>
           </div>
           <div class="bar-line">
             <div class="bar-track">
-              <div class="bar-fill food" :style="{ width: pct(stat.foodG, maxFood) + '%' }" />
+              <div
+                class="bar-fill food"
+                :class="{ achieved: achieved(stat.foodG, stat.targetFood) }"
+                :style="{ width: pct(stat.foodG, stat.targetFood) + '%' }"
+              />
             </div>
-            <span class="bar-val food">{{ round1(stat.foodG) }} g</span>
+            <span class="bar-val food">{{ round1(stat.foodG) }} / {{ round1(stat.targetFood) }} g</span>
           </div>
           <div class="litter-row">
             <span class="litter-item">
@@ -210,11 +219,16 @@ function handleSelect(catId: number) {
   background: var(--food);
 }
 
+/* 達標時整條變成達標色，取代原本的 water/food 主色，作為主要的達標訊號。 */
+.bar-fill.achieved {
+  background: var(--good);
+}
+
 .bar-val {
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   color: var(--ink-soft);
-  width: 52px;
+  width: 76px;
   flex-shrink: 0;
   text-align: right;
 }

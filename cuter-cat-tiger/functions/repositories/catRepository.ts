@@ -2,31 +2,47 @@
 export interface CatRow {
   id: number
   name: string
+  target_water: number
+  target_food: number
   created_at: string
 }
 
+export interface InsertCatInput {
+  name: string
+  target_water: number
+  target_food: number
+}
+
+export interface UpdateCatInput {
+  name?: string
+  target_water?: number
+  target_food?: number
+}
+
+const CAT_COLUMNS = `id, name, target_water, target_food, created_at`
+
 export async function listCats(db: D1Database): Promise<CatRow[]> {
   const { results } = await db
-    .prepare(`SELECT id, name, created_at FROM cats ORDER BY id ASC`)
+    .prepare(`SELECT ${CAT_COLUMNS} FROM cats ORDER BY id ASC`)
     .all<CatRow>()
   return results
 }
 
 export async function findCatById(db: D1Database, id: number): Promise<CatRow | null> {
   const row = await db
-    .prepare(`SELECT id, name, created_at FROM cats WHERE id = ?`)
+    .prepare(`SELECT ${CAT_COLUMNS} FROM cats WHERE id = ?`)
     .bind(id)
     .first<CatRow>()
   return row ?? null
 }
 
-export async function insertCat(db: D1Database, name: string): Promise<CatRow> {
+export async function insertCat(db: D1Database, input: InsertCatInput): Promise<CatRow> {
   const row = await db
     .prepare(
-      `INSERT INTO cats (name) VALUES (?)
-       RETURNING id, name, created_at`,
+      `INSERT INTO cats (name, target_water, target_food) VALUES (?, ?, ?)
+       RETURNING ${CAT_COLUMNS}`,
     )
-    .bind(name)
+    .bind(input.name, input.target_water, input.target_food)
     .first<CatRow>()
   if (!row) {
     throw new Error('INSERT cats 未回傳資料')
@@ -34,17 +50,35 @@ export async function insertCat(db: D1Database, name: string): Promise<CatRow> {
   return row
 }
 
-export async function updateCatName(
+/** 只更新有帶入的欄位；呼叫端須保證至少帶一個欄位。 */
+export async function updateCat(
   db: D1Database,
   id: number,
-  name: string,
+  patch: UpdateCatInput,
 ): Promise<CatRow | null> {
+  const sets: string[] = []
+  const values: unknown[] = []
+
+  if (patch.name !== undefined) {
+    sets.push('name = ?')
+    values.push(patch.name)
+  }
+  if (patch.target_water !== undefined) {
+    sets.push('target_water = ?')
+    values.push(patch.target_water)
+  }
+  if (patch.target_food !== undefined) {
+    sets.push('target_food = ?')
+    values.push(patch.target_food)
+  }
+
+  values.push(id)
   const row = await db
     .prepare(
-      `UPDATE cats SET name = ? WHERE id = ?
-       RETURNING id, name, created_at`,
+      `UPDATE cats SET ${sets.join(', ')} WHERE id = ?
+       RETURNING ${CAT_COLUMNS}`,
     )
-    .bind(name, id)
+    .bind(...values)
     .first<CatRow>()
   return row ?? null
 }

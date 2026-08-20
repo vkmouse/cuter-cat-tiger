@@ -12,6 +12,9 @@
   /* 以梅紫色區分如廁類別，同時維持整體低飽和色調。 */
   --litter: #7C6A94;
   --litter-soft: #EAE3F0;
+  /* 「今日總覽」目標值達標時的訊號色，跟 water/food/litter 主色區隔開。 */
+  --good: #4B7A4E;
+  --good-soft: #E1EBDD;
   --radius-lg: 18px;
   --radius-md: 12px;
 

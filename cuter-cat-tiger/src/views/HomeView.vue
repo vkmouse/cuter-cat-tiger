@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import CatTabs from '../components/cat/CatTabs.vue'
 import AddCatSheet from '../components/cat/AddCatSheet.vue'
+import EditCatSheet from '../components/cat/EditCatSheet.vue'
 import DateNav from '../components/nav/DateNav.vue'
 import DailyStats from '../components/stats/DailyStats.vue'
 import AllCatsStatsSheet from '../components/stats/AllCatsStatsSheet.vue'
@@ -14,9 +15,9 @@ import { useRecords } from '../composables/useRecords'
 import { useDailyStats } from '../composables/useDailyStats'
 import { useAllCatsDailyStats } from '../composables/useAllCatsDailyStats'
 import { addDaysToDateKey, dateTimeLocalValueToIso, todayDateKey } from '../utils/date'
-import type { CatRecord, RecordType } from '../types'
+import type { Cat, CatRecord, RecordType } from '../types'
 
-const { cats, loading: catsLoading, addCat } = useCats()
+const { cats, loading: catsLoading, addCat, updateCat } = useCats()
 
 const activeCatId = ref<number | null>(null)
 
@@ -146,6 +147,33 @@ async function handleAddCatSave(name: string) {
   }
 }
 
+const editCatOpen = ref(false)
+const editingCat = ref<Cat | null>(null)
+const editingCatSaving = ref(false)
+
+function openEditCat(catId: number) {
+  const cat = cats.value.find((c) => c.id === catId)
+  if (!cat) return
+  editingCat.value = cat
+  editCatOpen.value = true
+}
+
+function closeEditCat() {
+  editCatOpen.value = false
+  editingCat.value = null
+}
+
+async function handleEditCatSave(payload: { name: string; targetWater: number; targetFood: number }) {
+  if (!editingCat.value) return
+  editingCatSaving.value = true
+  try {
+    await updateCat(editingCat.value.id, payload)
+    closeEditCat()
+  } finally {
+    editingCatSaving.value = false
+  }
+}
+
 const deleteConfirmOpen = ref(false)
 const pendingDeleteId = ref<number | null>(null)
 
@@ -169,7 +197,13 @@ async function handleConfirmDelete() {
 <template>
   <div v-if="catsLoading" class="loading-state">載入貓咪清單中…</div>
   <template v-else>
-    <CatTabs :cats="cats" :active-cat-id="activeCatId" @select="(id) => (activeCatId = id)" @add-cat="openAddCat" />
+    <CatTabs
+      :cats="cats"
+      :active-cat-id="activeCatId"
+      @select="(id) => (activeCatId = id)"
+      @add-cat="openAddCat"
+      @edit-cat="openEditCat"
+    />
 
     <div class="card">
       <DateNav :date="selectedDate" @prev-day="goPrevDay" @next-day="goNextDay" @open-all-cats-stats="openAllCatsStats" />
@@ -211,6 +245,14 @@ async function handleConfirmDelete() {
   />
 
   <AddCatSheet :open="addCatOpen" :saving="addingCat" @cancel="closeAddCat" @save="handleAddCatSave" />
+
+  <EditCatSheet
+    :open="editCatOpen"
+    :cat="editingCat"
+    :saving="editingCatSaving"
+    @cancel="closeEditCat"
+    @save="handleEditCatSave"
+  />
 
   <AllCatsStatsSheet
     :open="allCatsStatsOpen"

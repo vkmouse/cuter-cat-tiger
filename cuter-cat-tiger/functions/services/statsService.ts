@@ -13,6 +13,9 @@ export interface DailyStat {
   /** 最新一筆 pee/poop，不受查詢日期影響。 */
   lastPeeAt: string | null
   lastPoopAt: string | null
+  // 讓「今日總覽」可以直接判斷有沒有達標，不用另外打一次 /api/cats。
+  targetWater: number
+  targetFood: number
 }
 
 interface DailyTotals {
@@ -69,6 +72,8 @@ export async function getDailyStats(db: D1Database, dateRaw: string | null): Pro
       poopCount: totals.poopCount,
       lastPeeAt: last.lastPeeAt,
       lastPoopAt: last.lastPoopAt,
+      targetWater: cat.target_water,
+      targetFood: cat.target_food,
     }
   })
 }

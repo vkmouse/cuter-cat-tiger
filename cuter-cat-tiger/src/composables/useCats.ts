@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { createCat, deleteCat, fetchCats, updateCat } from '../services/api'
+import { createCat, deleteCat, fetchCats, updateCat as updateCatApi } from '../services/api'
+import type { UpdateCatPayload } from '../types'
 
 export function useCats() {
   const queryClient = useQueryClient()
@@ -21,10 +22,12 @@ export function useCats() {
     },
   })
 
-  const renameMutation = useMutation({
-    mutationFn: (vars: { id: number; name: string }) => updateCat(vars.id, { name: vars.name }),
+  const updateMutation = useMutation({
+    mutationFn: (vars: { id: number; patch: UpdateCatPayload }) => updateCatApi(vars.id, vars.patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cats'] })
+      // 目標值變動會影響「今日總覽」的達標判斷，一併作廢。
+      queryClient.invalidateQueries({ queryKey: ['dailyStats'] })
     },
   })
 
@@ -38,12 +41,12 @@ export function useCats() {
     },
   })
 
-  async function addCat(name: string) {
-    return createMutation.mutateAsync({ name })
+  async function addCat(name: string, targetWater?: number, targetFood?: number) {
+    return createMutation.mutateAsync({ name, targetWater, targetFood })
   }
 
-  async function renameCat(id: number, name: string) {
-    return renameMutation.mutateAsync({ id, name })
+  async function updateCat(id: number, patch: UpdateCatPayload) {
+    return updateMutation.mutateAsync({ id, patch })
   }
 
   async function removeCat(id: number) {
@@ -55,7 +58,7 @@ export function useCats() {
     loading,
     error,
     addCat,
-    renameCat,
+    updateCat,
     removeCat,
   }
 }
