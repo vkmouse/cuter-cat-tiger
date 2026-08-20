@@ -1,7 +1,4 @@
-/**
- * records 表的資料存取層。只做 SQL 讀寫，不含業務邏輯。
- * 「當天」判斷一律用 date(datetime(occurred_at, '+8 hours')) = ?，對應 shared-spec 第 5 節 UTC+8 規則。
- */
+/** 查詢日期一律以 UTC+8 判斷，避免受執行環境時區影響。 */
 
 export interface RecordRow {
   id: number
@@ -33,7 +30,6 @@ export interface UpdateRecordInput {
 
 const RECORD_COLUMNS = `id, cat_id, type, amount, unit, note, occurred_at, created_at, updated_at`
 
-/** 列出某貓咪在指定 UTC+8 日期的所有紀錄，新到舊排序（對應前端列表需求）。 */
 export async function listRecordsByCatAndDate(
   db: D1Database,
   catId: number,
@@ -78,7 +74,6 @@ export async function insertRecord(
   return row
 }
 
-/** 部分更新紀錄（amount / unit / note / occurred_at 任意組合），並寫入 updated_at。 */
 export async function updateRecordFields(
   db: D1Database,
   id: number,
@@ -105,7 +100,6 @@ export async function updateRecordFields(
   }
 
   if (sets.length === 0) {
-    // 沒有任何欄位要更新，直接回傳目前資料
     return findRecordById(db, id)
   }
 
@@ -134,11 +128,7 @@ export interface DailySumRow {
   count: number
 }
 
-/**
- * 指定 UTC+8 日期、所有貓咪各 type 的當日總量與次數（groupby cat_id, type）。
- * water/food 用 total（SUM(amount)）；pee/poop 用 count（次數，amount 恆為 0 沒有意義）。
- * 沒有紀錄的組合不會出現在結果中。
- */
+/** water/food 回傳總量，pee/poop 回傳次數。 */
 export async function sumAmountsByDate(db: D1Database, date: string): Promise<DailySumRow[]> {
   const { results } = await db
     .prepare(
@@ -158,10 +148,7 @@ export interface LastOccurredRow {
   last_occurred_at: string
 }
 
-/**
- * 每隻貓咪最後一筆 pee/poop 的時間，「不分日期」，取全部歷史裡最新的一筆。
- * 用於「多貓總覽」的「距離上次多久」，跟 sumAmountsByDate 的當日限定語意不同，刻意分開成獨立查詢。
- */
+/** 取全部歷史中每隻貓咪最後一次 pee/poop。 */
 export async function findLastLitterOccurredAt(db: D1Database): Promise<LastOccurredRow[]> {
   const { results } = await db
     .prepare(

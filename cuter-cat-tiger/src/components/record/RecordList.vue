@@ -14,7 +14,6 @@ const emit = defineEmits<{
   remove: [id: number]
 }>()
 
-// 新到舊排序（frontend-spec.md 第2節）
 const sorted = computed(() =>
   [...props.records].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()),
 )

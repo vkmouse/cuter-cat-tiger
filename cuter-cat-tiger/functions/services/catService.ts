@@ -3,7 +3,6 @@ import type { CatRow } from '../repositories/catRepository.js'
 import { ApiError, parseJsonBody, requireNonEmptyString } from '../utils/validation.js'
 import { sqliteUtcToIso } from '../utils/datetime.js'
 
-/** 對外 API 契約，對齊 shared-spec.md 第 4 節的 Cat 型別。 */
 export interface Cat {
   id: number
   name: string
@@ -40,7 +39,6 @@ export async function renameCat(db: D1Database, id: number, request: Request): P
   return toDto(row)
 }
 
-/** 刪除貓咪；底下 records 由 DB 的 ON DELETE CASCADE 一併刪除。 */
 export async function removeCat(db: D1Database, id: number): Promise<void> {
   const deleted = await catRepository.deleteCat(db, id)
   if (!deleted) {

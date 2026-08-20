@@ -22,11 +22,9 @@ const emit = defineEmits<{
 const amount = ref('')
 const timeValue = ref('')
 const note = ref('')
-// 快速備註 tag：每次開啟表單時，依當前 type 從 localStorage 重新讀取一次，
-// 確保剛剛用過、次數剛好累積到門檻的文字也能即時出現。
+// 每次開啟時重新讀取，確保剛達到門檻的備註能立即出現。
 const quickNotes = ref<string[]>([])
 
-// pee/poop 不量化，表單不需要「數量」欄位（litter-record-spec.md 第4節）
 const isLitter = (t: RecordType) => t === 'pee' || t === 'poop'
 
 watch(
@@ -125,15 +123,11 @@ function handleSubmit() {
 </template>
 
 <style scoped>
-/* 藥丸樣式本身已經抽到 base.css 的共用 .pill / .pill-group（跟 .btn 系列同一層級）。
-   這裡只保留「備註欄位下方要留一點間距」這個屬於本元件排版脈絡的細節。 */
 .quick-notes {
   margin-top: 8px;
 }
 
-/* iOS Safari 對 datetime-local 預設套用原生外觀，這個外觀自帶一段內距，
-   不受 CSS padding 或 ::-webkit-datetime-edit 影響，導致文字比其他欄位偏右。
-   先關掉原生外觀，讓自訂 padding 生效，跟其他欄位對齊 */
+/* iOS Safari 的原生 datetime-local 外觀會影響欄位對齊。 */
 .field input[type='datetime-local'] {
   -webkit-appearance: none;
   appearance: none;

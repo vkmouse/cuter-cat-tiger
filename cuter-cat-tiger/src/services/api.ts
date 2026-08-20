@@ -1,4 +1,3 @@
-// 統一包 fetch，錯誤時解析後端回傳的 { error } 訊息，統一拋成 Error 給呼叫端 catch。
 
 import type {
   Cat,
@@ -12,24 +11,20 @@ import type {
 
 async function parseJsonOrThrow<T>(res: Response, fallbackMessage: string): Promise<T> {
   if (!res.ok) {
-    // 後端錯誤回傳格式統一為 { error: string }（backend-spec.md 第 5 節）
     let message = fallbackMessage
     try {
       const body = (await res.json()) as { error?: string }
       if (body?.error) message = body.error
     } catch {
-      // 回應不是 JSON 或沒有 body，維持預設訊息
     }
     throw new Error(`${message}（${res.status}）`)
   }
-  // 204 No Content 沒有 body 可解析
   if (res.status === 204) {
     return undefined as T
   }
   return res.json() as Promise<T>
 }
 
-// ---- 貓咪管理 ----
 
 export async function fetchCats(): Promise<Cat[]> {
   const res = await fetch('/api/cats')
@@ -59,7 +54,6 @@ export async function deleteCat(id: number): Promise<void> {
   return parseJsonOrThrow<void>(res, '刪除貓咪失敗')
 }
 
-// ---- 紀錄管理 ----
 
 export async function fetchRecords(catId: number, date: string): Promise<CatRecord[]> {
   const params = new URLSearchParams({ catId: String(catId), date })
@@ -90,7 +84,6 @@ export async function deleteRecord(id: number): Promise<void> {
   return parseJsonOrThrow<void>(res, '刪除紀錄失敗')
 }
 
-// ---- 統計 ----
 
 export async function fetchDailyStats(date: string): Promise<DailyStat[]> {
   const params = new URLSearchParams({ date })

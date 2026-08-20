@@ -1,7 +1,3 @@
-/**
- * cats 表的資料存取層。只做 SQL 讀寫，不含業務邏輯。
- * Row 型別對應資料庫實際欄位（snake_case），與對外 camelCase DTO（services 層）分開維護。
- */
 
 export interface CatRow {
   id: number
@@ -53,10 +49,8 @@ export async function updateCatName(
   return row ?? null
 }
 
-/** 刪除貓咪，回傳是否有資料列被刪除。底下 records 由 FK CASCADE 一併刪除。 */
 export async function deleteCat(db: D1Database, id: number): Promise<boolean> {
-  // D1 不保證 foreign_keys pragma 會跨連線持續生效，delete 前明確啟用一次，
-  // 確保 ON DELETE CASCADE 生效、不留下孤兒 records（見 backend-spec 2.4）。
+  // D1 連線的 foreign_keys 狀態不應視為持久設定，因此刪除前明確啟用。
   await db.prepare(`PRAGMA foreign_keys = ON`).run()
   const result = await db.prepare(`DELETE FROM cats WHERE id = ?`).bind(id).run()
   return (result.meta.changes ?? 0) > 0

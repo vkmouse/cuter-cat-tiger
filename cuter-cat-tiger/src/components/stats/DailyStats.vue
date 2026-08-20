@@ -32,8 +32,7 @@ defineProps<{
 </template>
 
 <style scoped>
-/* 從 2 個數字（水/飼料）變成 4 個（多了尿尿/大便次數），一排放不下，
-   改成 2x2 grid；跟決策點1（快速記錄按鈕）採同一種「兩排兩欄」排版邏輯，維持視覺一致。 */
+/* 四項統計維持足夠的顯示空間。 */
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr;

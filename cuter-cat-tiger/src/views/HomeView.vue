@@ -20,7 +20,6 @@ const { cats, loading: catsLoading, addCat } = useCats()
 
 const activeCatId = ref<number | null>(null)
 
-// 貓咪列表載入後，預設選第一隻；若目前選的貓咪被刪除了，也退回第一隻。
 watch(
   cats,
   (list) => {
@@ -43,7 +42,6 @@ function goPrevDay() {
   selectedDate.value = addDaysToDateKey(selectedDate.value, -1)
 }
 function goNextDay() {
-  // 「往未來日期翻頁」是否要限制尚未定案（frontend-spec.md 第7節），目前先不限制。
   selectedDate.value = addDaysToDateKey(selectedDate.value, 1)
 }
 
@@ -60,7 +58,6 @@ const {
 
 const { waterMl, foodG, peeCount, poopCount, loading: statsLoading } = useDailyStats(activeCatId, selectedDate)
 
-// ---------- 多貓總覽底部抽屜 ----------
 const allCatsStatsOpen = ref(false)
 const {
   stats: allCatsStats,
@@ -79,7 +76,6 @@ function handleAllCatsStatsSelectCat(catId: number) {
   closeAllCatsStats()
 }
 
-// ---------- 紀錄新增／編輯底部抽屜 ----------
 const recordSheetOpen = ref(false)
 const recordSheetMode = ref<'add' | 'edit'>('add')
 const recordSheetType = ref<RecordType>('water')
@@ -112,7 +108,6 @@ async function handleRecordSave(payload: { amount?: number; timeValue: string; n
     await addRecord({
       catId: activeCatId.value,
       type: recordSheetType.value,
-      // pee/poop 不量化，不帶 amount/unit（帶了後端也會忽略、強制存 0/''，見 litter-record-spec.md 第3.2節）
       ...(isLitter ? {} : { amount: payload.amount, unit: recordSheetType.value === 'water' ? 'ml' : 'g' }),
       note: payload.note || null,
       occurredAt,
@@ -124,12 +119,11 @@ async function handleRecordSave(payload: { amount?: number; timeValue: string; n
       note: payload.note || null,
     })
   }
-  // 只在成功儲存後才累計「快速備註」使用次數，避免送出失敗也被記進去
+  // 只有成功儲存才累計使用次數，避免失敗請求污染統計。
   recordNoteUsage(recordSheetType.value, payload.note)
   closeRecordSheet()
 }
 
-// ---------- 新增貓咪抽屜 ----------
 const addCatOpen = ref(false)
 const addingCat = ref(false)
 
@@ -152,7 +146,6 @@ async function handleAddCatSave(name: string) {
   }
 }
 
-// ---------- 刪除紀錄確認抽屜 ----------
 const deleteConfirmOpen = ref(false)
 const pendingDeleteId = ref<number | null>(null)
 
@@ -257,8 +250,7 @@ async function handleConfirmDelete() {
   overflow: hidden;
 }
 
-/* 原本 2 顆一排，新增 pee/poop 後變成 4 顆，改成兩排兩欄（決策點1），
-   4 顆維持原本藥丸大小與字級，避免擠壓成不好點的窄按鈕。 */
+/* 四個操作項目需要維持足夠的點擊區域。 */
 .quick-add {
   display: grid;
   grid-template-columns: 1fr 1fr;

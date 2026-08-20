@@ -15,7 +15,6 @@ import {
 } from '../utils/validation.js'
 import { sqliteUtcToIso } from '../utils/datetime.js'
 
-/** 對外 API 契約，對齊 shared-spec.md 第 4 節的 Record 型別。 */
 export interface RecordDto {
   id: number
   catId: number
@@ -69,7 +68,7 @@ export async function createRecord(db: D1Database, request: Request): Promise<Re
   const catId = requirePositiveInt(body.catId, 'catId')
   const type = requireRecordType(body.type)
 
-  // pee/poop 不量化：即使 client 手滑帶了 amount/unit 也安靜忽略，一律強制存 0 / ''。
+  // pee/poop 沒有數量概念，固定以 0 / '' 儲存。
   let amount: number
   let unit: string
   if (isQuantifiedType(type)) {
@@ -113,13 +112,11 @@ export async function updateRecord(
 
   const patch: UpdateRecordInput = {}
 
-  // pee/poop 不量化：amount/unit 永遠是 0 / ''，即使 body 帶了值也安靜忽略，不寫入 patch。
   if (isQuantifiedType(existing.type)) {
     if (body.amount !== undefined) {
       patch.amount = requireAmount(body.amount)
     }
     if (body.unit !== undefined) {
-      // type 不可改，unit 若要改也必須維持與既有 type 對應（water → ml, food → g）
       patch.unit = requireUnitForType(existing.type, body.unit)
     }
   }

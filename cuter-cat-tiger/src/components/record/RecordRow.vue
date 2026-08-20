@@ -16,8 +16,7 @@ const emit = defineEmits<{
 
 const timeLabel = computed(() => formatTimeLabel(props.record.occurredAt))
 
-// pee/poop 不量化（amount 固定為 0），跟 water/food 那種「數字 + 單位」不是同一種資訊，
-// 原本放數量的位置改放紀錄類型文字（決策點2：沿用 badge 版型，只是右側改文字）。
+/* 如廁紀錄沒有數量，改顯示類型文字。 */
 const LITTER_LABEL: Record<string, string> = { pee: '尿尿', poop: '大便' }
 const isLitter = computed(() => props.record.type === 'pee' || props.record.type === 'poop')
 const amountLabel = computed(() =>

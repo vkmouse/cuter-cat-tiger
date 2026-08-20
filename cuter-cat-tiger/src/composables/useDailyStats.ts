@@ -2,11 +2,6 @@ import { computed, toValue, type MaybeRefOrGetter } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { fetchDailyStats } from '../services/api'
 
-/**
- * queryKey: ['dailyStats', catId, date]（frontend-spec.md 第4節）
- * 後端 /api/stats/daily?date= 一次回傳「所有貓咪」當日統計（backend-spec.md 第4.3節），
- * 這裡實際打 API 時只帶 date，回來後在前端依 catId 取出該貓咪那一筆。
- */
 export function useDailyStats(
   catId: MaybeRefOrGetter<number | null | undefined>,
   date: MaybeRefOrGetter<string>,

@@ -1,8 +1,4 @@
 <script setup lang="ts">
-// 抽出 4 個 Sheet（AddCatSheet / ConfirmSheet / AllCatsStatsSheet / RecordFormSheet）
-// 共用的 backdrop + panel + handle + dialog 標籤結構。
-// 樣式本身（.sheet-backdrop / .sheet-panel / .sheet-handle 等）已經是 base.css 的全域共用 class，
-// 這裡只是把「重複寫 4 次」的標籤與 aria 屬性收斂成一個元件。
 import { computed, useId } from 'vue'
 
 const props = withDefaults(
@@ -10,9 +6,7 @@ const props = withDefaults(
     open: boolean
     title: string
     elevated?: boolean
-    // 個別 Sheet 若需要調整 panel 本身的樣式（例如 AllCatsStatsSheet 的 max-height/捲動），
-    // scoped CSS 碰不到子元件的 root 節點，因此開放傳入專屬 class 名稱讓呼叫端用非 scoped
-    // style 處理，取代整段重複的 backdrop/panel 標籤。
+    // scoped CSS 無法修改子元件 root，因此允許呼叫端注入 panel class。
     panelClass?: string
   }>(),
   {

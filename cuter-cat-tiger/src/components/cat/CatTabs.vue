@@ -44,8 +44,8 @@ const emit = defineEmits<{
   gap: 4px;
   padding: 10px 16px 2px;
   overflow-x: auto;
-  overflow-y: hidden; /* 只設定 overflow-x 會讓瀏覽器隱性把 overflow-y 也變成 auto，因而冒出不必要的垂直捲軸 */
-  scrollbar-width: none; /* Firefox：橫向多貓咪時仍可滑動，但不顯示捲軸樣式 */
+  overflow-y: hidden; /* 避免橫向滑動時產生垂直捲軸 */
+  scrollbar-width: none; /* 保留橫向滑動但隱藏捲軸 */
   position: sticky;
   top: 0;
   z-index: 5;
@@ -55,7 +55,7 @@ const emit = defineEmits<{
 }
 
 .cat-tabs::-webkit-scrollbar {
-  display: none; /* Chrome/Safari：同上 */
+  display: none; /* 保留橫向滑動但隱藏捲軸 */
 }
 
 .cat-tab {
@@ -82,8 +82,7 @@ const emit = defineEmits<{
   box-shadow: 0 -2px 0 var(--water) inset;
 }
 
-/* 新增貓咪只是偶爾才用到的次要動作，刻意弱化成純圖示的小圓鈕，
-   跟上面貓咪分頁的視覺權重拉開，避免搶走主要內容的注意力。 */
+/* 新增按鈕刻意弱化，避免搶走目前貓咪的視覺焦點。 */
 .add-cat-btn {
   flex-shrink: 0;
   width: 26px;

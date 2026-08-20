@@ -26,12 +26,11 @@ const emit = defineEmits<{
   selectCat: [catId: number]
 }>()
 
-// 每隻貓的水量/飼料量 bar 用「同一批貓咪裡的最大值」當作滿格基準，
-// 純粹讓彼此的量一眼比得出來，不是什麼「目標值」（目前資料模型沒有每隻貓的目標量）。
+// 以當批貓咪的最大值作為基準，方便直接比較彼此的量。
 const maxWater = computed(() => Math.max(1, ...props.stats.map((s) => s.waterMl)))
 const maxFood = computed(() => Math.max(1, ...props.stats.map((s) => s.foodG)))
 
-// 只有多隻貓咪、且水量彼此有落差時，才標出當天喝最少的那隻，避免資料只有一隻貓或全部同量時誤導。
+// 只有存在可比較的差異時才標示最低值，避免單一或同量資料造成誤導。
 const lowestWaterCatId = computed(() => {
   if (props.stats.length < 2) return null
   const sorted = [...props.stats].sort((a, b) => a.waterMl - b.waterMl)
@@ -106,9 +105,7 @@ function handleSelect(catId: number) {
 </template>
 
 <style>
-/* 不能加 scoped：sheet-panel 是 BaseSheet 的 root 元素，scoped CSS 的 data-v 屬性
-   碰不到子元件內部渲染出來的節點。這裡改用專屬且不易撞名的 class（allcats-stats-panel），
-   只調整這個 Sheet 需要的 max-height/padding/捲動樣式（貓咪數量多時內容可能超過畫面高度）。 */
+/* sheet-panel 是 BaseSheet 的 root，因此需要非 scoped CSS。 */
 .allcats-stats-panel {
   max-height: 72vh;
   padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
@@ -116,8 +113,6 @@ function handleSelect(catId: number) {
 }
 
 .allcats-stats-panel h2 {
-  /* 標題含日期文字，改成跟 DateNav.date-label 一致的字體（body 而非預設的 heading 襯線體），
-     讓「日期」這個資訊在 Nav 跟這裡的呈現風格統一，不要一邊襯線一邊無襯線。 */
   font-family: var(--font-body);
   font-weight: 600;
   font-size: 1.1rem;
@@ -224,8 +219,7 @@ function handleSelect(catId: number) {
   text-align: right;
 }
 
-/* 每隻貓的「今天次數」+「距離上次多久」，跟上面 water/food 的 bar 分開一行，
-   因為 pee/poop 不量化，沒有可以畫 bar 的「量」，用文字並排呈現即可。 */
+/* pee/poop 沒有可比較的數量，因此改用文字呈現。 */
 .litter-row {
   display: flex;
   flex-wrap: wrap;

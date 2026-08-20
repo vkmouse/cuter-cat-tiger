@@ -1,5 +1,4 @@
-// 對齊 shared-spec.md 第 4 節：對外 API 契約與前端型別一律用 camelCase。
-// 這裡是唯一定義來源，後端 functions/services/*.ts 的 DTO 需與此對齊。
+/** 前後端 API 型別的唯一前端定義來源。 */
 
 export type RecordType = 'water' | 'food' | 'pee' | 'poop'
 export type RecordUnit = 'ml' | 'g' | ''
@@ -28,12 +27,11 @@ export interface DailyStat {
   foodG: number
   peeCount: number
   poopCount: number
-  // 不分日期，全部歷史裡最後一次 pee/poop 的時間；永遠是「距離現在最新一筆」，不受查詢的 date 影響。沒記錄過為 null。
+  // 不受查詢日期影響，代表全部歷史中的最新時間。
   lastPeeAt: string | null
   lastPoopAt: string | null
 }
 
-// ---- API 請求 payload ----
 
 export interface CreateCatPayload {
   name: string
@@ -46,7 +44,6 @@ export interface UpdateCatPayload {
 export interface CreateRecordPayload {
   catId: number
   type: RecordType
-  // water/food 為必填；pee/poop 不量化，不需要帶這兩個欄位（帶了後端也會忽略、強制存 0 / ''）
   amount?: number
   unit?: RecordUnit
   note?: string | null

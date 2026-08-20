@@ -1,7 +1,3 @@
-/**
- * 共用欄位驗證與錯誤處理。
- * api/*.ts 統一 catch ApiError 並轉成 { error: string } + 對應狀態碼。
- */
 
 export class ApiError extends Error {
   status: number
@@ -20,7 +16,6 @@ export function errorResponse(err: unknown): Response {
   return Response.json({ error: '伺服器發生錯誤' }, { status: 500 })
 }
 
-/** 包裝 handler，統一處理未預期錯誤，避免每個路由各自重複 try/catch */
 export function withErrorHandling<Env = unknown>(
   handler: PagesFunction<Env>,
 ): PagesFunction<Env> {
@@ -55,7 +50,6 @@ export function requirePositiveInt(value: unknown, field: string): number {
   return num
 }
 
-/** 解析路由參數（例如 :id），格式錯誤視為 400。 */
 export function parseIdParam(raw: string | undefined, field = 'id'): number {
   if (raw === undefined) {
     throw new ApiError(400, `缺少 ${field}`)
@@ -66,7 +60,7 @@ export function parseIdParam(raw: string | undefined, field = 'id'): number {
 export type RecordType = 'water' | 'food' | 'pee' | 'poop'
 export type RecordUnit = 'ml' | 'g' | ''
 
-/** 有數量概念的類型（喝水/飼料），如廁類型（pee/poop）不量化，amount/unit 一律存 0 / ''。 */
+/** 只有 water / food 需要數量。 */
 export const QUANTIFIED_RECORD_TYPES: RecordType[] = ['water', 'food']
 
 export function isQuantifiedType(type: RecordType): type is 'water' | 'food' {
@@ -87,7 +81,6 @@ export function requireRecordType(value: unknown): RecordType {
   return value
 }
 
-/** 驗證 unit 是否與 type 對應。僅用於 water/food；pee/poop 不呼叫這個函式，直接固定存 ''。 */
 export function requireUnitForType(type: 'water' | 'food', unit: unknown): RecordUnit {
   const expected = RECORD_TYPE_UNIT[type]
   if (unit !== expected) {
@@ -98,7 +91,7 @@ export function requireUnitForType(type: 'water' | 'food', unit: unknown): Recor
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
-/** 驗證 YYYY-MM-DD 格式的日期字串（代表 UTC+8 當天）。 */
+/** 日期代表 UTC+8 的日曆日。 */
 export function requireDateParam(raw: string | null, field = 'date'): string {
   if (!raw || !DATE_RE.test(raw)) {
     throw new ApiError(400, `${field} 格式錯誤，需為 YYYY-MM-DD`)
@@ -106,7 +99,7 @@ export function requireDateParam(raw: string | null, field = 'date'): string {
   return raw
 }
 
-/** 驗證並正規化 ISO 時間字串，回傳 UTC ISO 字串。 */
+/** 正規化為 UTC ISO 字串。 */
 export function requireIsoDateTime(value: unknown, field: string): string {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new ApiError(400, `${field} 必須為 ISO 時間字串`)
@@ -118,7 +111,6 @@ export function requireIsoDateTime(value: unknown, field: string): string {
   return parsed.toISOString()
 }
 
-/** 與 requireIsoDateTime 相同，但允許省略（回傳 undefined）。 */
 export function optionalIsoDateTime(value: unknown, field: string): string | undefined {
   if (value === undefined || value === null) return undefined
   return requireIsoDateTime(value, field)

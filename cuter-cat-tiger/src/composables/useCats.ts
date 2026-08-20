@@ -31,8 +31,7 @@ export function useCats() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteCat(id),
     onSuccess: () => {
-      // 刪除貓咪是 CASCADE，連同紀錄一起刪除（shared-spec.md 第3節），
-      // 因此連 records / dailyStats 的快取也要一併作廢。
+      // 刪除會連帶影響紀錄與統計，因此一起作廢相關快取。
       queryClient.invalidateQueries({ queryKey: ['cats'] })
       queryClient.invalidateQueries({ queryKey: ['records'] })
       queryClient.invalidateQueries({ queryKey: ['dailyStats'] })
