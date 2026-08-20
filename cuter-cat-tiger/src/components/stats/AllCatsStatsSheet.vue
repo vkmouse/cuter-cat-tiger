@@ -116,6 +116,10 @@ function handleSelect(catId: number) {
 }
 
 .allcats-stats-panel h2 {
+  /* 標題含日期文字，改成跟 DateNav.date-label 一致的字體（body 而非預設的 heading 襯線體），
+     讓「日期」這個資訊在 Nav 跟這裡的呈現風格統一，不要一邊襯線一邊無襯線。 */
+  font-family: var(--font-body);
+  font-weight: 600;
   font-size: 1.1rem;
   margin: 0 0 14px;
 }

@@ -146,6 +146,56 @@ button {
   cursor: not-allowed;
 }
 
+/* 共用藥丸狀選取按鈕：跟 .btn 系列一樣依記錄類型疊加 .food / .litter 修飾主色，
+   用於「一組可點選的短文字選項」情境（目前用於備註欄位下方的快速備註 tag）。
+   .pill-group 只負責排版（換行 + 間距），實際顏色都在 .pill 上。 */
+.pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pill {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.pill:hover {
+  border-color: var(--water);
+}
+
+.pill.active {
+  background: var(--water);
+  border-color: var(--water);
+  color: #fff;
+}
+
+.pill-group.food .pill:hover {
+  border-color: var(--food);
+}
+
+.pill-group.food .pill.active {
+  background: var(--food);
+  border-color: var(--food);
+}
+
+.pill-group.litter .pill:hover {
+  border-color: var(--litter);
+}
+
+.pill-group.litter .pill.active {
+  background: var(--litter);
+  border-color: var(--litter);
+}
+
 /* 共用表單欄位樣式 */
 .field {
   margin-bottom: 14px;

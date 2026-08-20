@@ -7,6 +7,7 @@ import DailyStats from '../components/stats/DailyStats.vue'
 import AllCatsStatsSheet from '../components/stats/AllCatsStatsSheet.vue'
 import RecordList from '../components/record/RecordList.vue'
 import RecordFormSheet from '../components/record/RecordFormSheet.vue'
+import { recordNoteUsage } from '../composables/useQuickNotes'
 import ConfirmSheet from '../components/ui/ConfirmSheet.vue'
 import { useCats } from '../composables/useCats'
 import { useRecords } from '../composables/useRecords'
@@ -123,6 +124,8 @@ async function handleRecordSave(payload: { amount?: number; timeValue: string; n
       note: payload.note || null,
     })
   }
+  // 只在成功儲存後才累計「快速備註」使用次數，避免送出失敗也被記進去
+  recordNoteUsage(recordSheetType.value, payload.note)
   closeRecordSheet()
 }
 

@@ -118,3 +118,69 @@ export const Saving: Story = {
     saving: true,
   },
 }
+
+// 快速備註 tag 是元件內部直接讀 localStorage（src/composables/useQuickNotes.ts），
+// 不是 prop，所以要在渲染前先塞好資料才看得到 tag。
+// key 格式（'cuterCatTiger:quickNotes:{type}'）跟該 composable 內部的 STORAGE_PREFIX 一致，
+// 因為該檔案沒有對外匯出 key 產生函式，這裡只能照抄格式；composable 若改了 key 格式，這裡要同步改。
+function seedQuickNotes(type: string, entries: Array<{ text: string; count: number }>) {
+  const key = `cuterCatTiger:quickNotes:${type}`
+  const now = Date.now()
+  window.localStorage.setItem(
+    key,
+    JSON.stringify(entries.map((e, i) => ({ ...e, lastUsedAt: now - i * 1000 }))),
+  )
+}
+
+export const AddWaterWithQuickNotes: Story = {
+  args: {
+    open: true,
+    mode: 'add',
+    type: 'water',
+    catName: '橘子',
+  },
+  decorators: [
+    (story) => {
+      seedQuickNotes('water', [
+        { text: '加水', count: 6 },
+        { text: '湯罐加水', count: 4 },
+        { text: '換新的水碗', count: 2 },
+      ])
+      return { components: { story }, template: '<story />' }
+    },
+  ],
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '模擬使用者已經用過幾次類似備註後，備註欄位下方會出現的快速備註 tag（藥丸狀，點擊後直接取代備註內容、選中時實色填滿）。用滿 2 次以上的文字才會出現，最多顯示 8 個。',
+      },
+    },
+  },
+}
+
+export const AddFoodWithQuickNotes: Story = {
+  args: {
+    open: true,
+    mode: 'add',
+    type: 'food',
+    catName: '橘子',
+  },
+  decorators: [
+    (story) => {
+      seedQuickNotes('food', [
+        { text: '換新的飼料', count: 5 },
+        { text: '偏食，只吃一半', count: 3 },
+        { text: '混罐頭一起吃', count: 2 },
+      ])
+      return { components: { story }, template: '<story />' }
+    },
+  ],
+  parameters: {
+    docs: {
+      description: {
+        story: '飼料類型的快速備註 tag 選中時填滿的顏色會跟著換成 --food（跟「儲存」按鈕的 food 樣式一致）。',
+      },
+    },
+  },
+}

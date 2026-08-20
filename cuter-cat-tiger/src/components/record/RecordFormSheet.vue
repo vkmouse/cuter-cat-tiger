@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import type { CatRecord, RecordType } from '../../types'
 import { nowDateTimeLocalValue, isoToDateTimeLocalValue } from '../../utils/date'
+import { getQuickNotes } from '../../composables/useQuickNotes'
 import BaseSheet from '../ui/BaseSheet.vue'
 
 const props = defineProps<{
@@ -21,6 +22,9 @@ const emit = defineEmits<{
 const amount = ref('')
 const timeValue = ref('')
 const note = ref('')
+// 快速備註 tag：每次開啟表單時，依當前 type 從 localStorage 重新讀取一次，
+// 確保剛剛用過、次數剛好累積到門檻的文字也能即時出現。
+const quickNotes = ref<string[]>([])
 
 // pee/poop 不量化，表單不需要「數量」欄位（litter-record-spec.md 第4節）
 const isLitter = (t: RecordType) => t === 'pee' || t === 'poop'
@@ -38,9 +42,14 @@ watch(
       timeValue.value = nowDateTimeLocalValue()
       note.value = ''
     }
+    quickNotes.value = getQuickNotes(props.type)
   },
   { immediate: true },
 )
+
+function applyQuickNote(text: string) {
+  note.value = text
+}
 
 const TYPE_ACTION_LABEL: Record<RecordType, string> = {
   water: '記錄喝水',
@@ -88,6 +97,22 @@ function handleSubmit() {
       <div class="field">
         <label for="fNote">備註</label>
         <textarea id="fNote" v-model="note" placeholder="例如：湯罐加水" />
+        <div
+          v-if="quickNotes.length"
+          class="pill-group quick-notes"
+          :class="{ food: type === 'food', litter: isLitter(type) }"
+        >
+          <button
+            v-for="text in quickNotes"
+            :key="text"
+            type="button"
+            class="pill"
+            :class="{ active: note === text }"
+            @click="applyQuickNote(text)"
+          >
+            {{ text }}
+          </button>
+        </div>
       </div>
       <div class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
@@ -100,6 +125,12 @@ function handleSubmit() {
 </template>
 
 <style scoped>
+/* 藥丸樣式本身已經抽到 base.css 的共用 .pill / .pill-group（跟 .btn 系列同一層級）。
+   這裡只保留「備註欄位下方要留一點間距」這個屬於本元件排版脈絡的細節。 */
+.quick-notes {
+  margin-top: 8px;
+}
+
 /* iOS Safari 對 datetime-local 預設套用原生外觀，這個外觀自帶一段內距，
    不受 CSS padding 或 ::-webkit-datetime-edit 影響，導致文字比其他欄位偏右。
    先關掉原生外觀，讓自訂 padding 生效，跟其他欄位對齊 */
