@@ -171,6 +171,27 @@ function handleSubmit() {
         </button>
       </div>
 
+      <template v-if="!isLitter(type)">
+        <div class="field">
+          <ExpandableField v-model:expanded="calcExpanded">
+            <template #summary>
+              <span class="amount-summary-label">{{ amountLabel }}</span>
+              <span class="amount-summary-value">
+                {{ amount }}<span v-if="amount"> {{ amountUnit }}</span>
+              </span>
+            </template>
+            <CalculatorPad
+              :key="formInstanceKey"
+              v-model="amount"
+              :type="type === 'water' ? 'water' : 'food'"
+              :unit="amountUnit"
+              :saving="saving"
+              :require-positive="mode === 'add' || action === 'feeding'"
+            />
+          </ExpandableField>
+        </div>
+      </template>
+
       <template v-if="action === 'record'">
         <div class="field">
           <label>時間</label>
@@ -199,24 +220,6 @@ function handleSubmit() {
       </template>
 
       <template v-if="!isLitter(type)">
-        <div class="field">
-          <ExpandableField v-model:expanded="calcExpanded">
-            <template #summary>
-              <span class="amount-summary-label">{{ amountLabel }}</span>
-              <span class="amount-summary-value">
-                {{ amount }}<span v-if="amount"> {{ amountUnit }}</span>
-              </span>
-            </template>
-            <CalculatorPad
-              :key="formInstanceKey"
-              v-model="amount"
-              :type="type === 'water' ? 'water' : 'food'"
-              :unit="amountUnit"
-              :saving="saving"
-              :require-positive="mode === 'add' || action === 'feeding'"
-            />
-          </ExpandableField>
-        </div>
         <div class="sheet-actions">
           <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
           <button
