@@ -14,8 +14,9 @@ import DailyStats from '../../../../cuter-cat-tiger/src/components/stats/DailySt
 import AllCatsStatsSheet from '../../../../cuter-cat-tiger/src/components/stats/AllCatsStatsSheet.vue'
 import RecordList from '../../../../cuter-cat-tiger/src/components/record/RecordList.vue'
 import RecordFormSheet from '../../../../cuter-cat-tiger/src/components/record/RecordFormSheet.vue'
+import StartFeedingSheet from '../../../../cuter-cat-tiger/src/components/record/StartFeedingSheet.vue'
 import PendingFeedingList from '../../../../cuter-cat-tiger/src/components/record/PendingFeedingList.vue'
-import CompleteFeedingSessionSheet from '../../../../cuter-cat-tiger/src/components/record/CompleteFeedingSessionSheet.vue'
+import CompleteFeedingSheet from '../../../../cuter-cat-tiger/src/components/record/CompleteFeedingSheet.vue'
 import ConfirmSheet from '../../../../cuter-cat-tiger/src/components/ui/ConfirmSheet.vue'
 import { addDaysToDateKey, dateKeyFromIso, dateTimeLocalValueToIso, todayDateKey } from '../../../../cuter-cat-tiger/src/utils/date'
 import type { Cat, CatRecord, DailyStat, FeedingSession, RecordType } from '../../../../cuter-cat-tiger/src/types'
@@ -159,81 +160,64 @@ function handleAllCatsStatsSelectCat(catId: number) {
 const recordSheetOpen = ref(false)
 const recordSheetMode = ref<'add' | 'edit'>('add')
 const recordSheetType = ref<RecordType>('water')
-const recordSheetAction = ref<'record' | 'feeding'>('record')
 const editingRecord = ref<CatRecord | null>(null)
-const editingFeedingSession = ref<FeedingSession | null>(null)
 const recordSaving = ref(false)
+
+// ---------- 開始餵/修改給的量底部抽屜（先給後測 step 1） ----------
+const feedingSheetOpen = ref(false)
+const feedingSheetMode = ref<'add' | 'edit'>('add')
+const feedingSheetType = ref<'water' | 'food'>('water')
+const editingFeedingSession = ref<FeedingSession | null>(null)
 const feedingSessionSaving = ref(false)
 
 function openAddRecord(type: RecordType) {
   recordSheetMode.value = 'add'
   recordSheetType.value = type
-  recordSheetAction.value = 'record'
   editingRecord.value = null
-  editingFeedingSession.value = null
   recordSheetOpen.value = true
 }
 
 function openStartFeedingSession(type: 'water' | 'food') {
-  recordSheetMode.value = 'add'
-  recordSheetType.value = type
-  recordSheetAction.value = 'feeding'
-  editingRecord.value = null
+  feedingSheetMode.value = 'add'
+  feedingSheetType.value = type
   editingFeedingSession.value = null
-  recordSheetOpen.value = true
+  feedingSheetOpen.value = true
 }
 
 function openEditRecord(record: CatRecord) {
   recordSheetMode.value = 'edit'
   recordSheetType.value = record.type
-  recordSheetAction.value = 'record'
   editingRecord.value = record
-  editingFeedingSession.value = null
   recordSheetOpen.value = true
 }
 
 function openEditFeedingSession(session: FeedingSession) {
-  recordSheetMode.value = 'edit'
-  recordSheetType.value = session.type
-  recordSheetAction.value = 'feeding'
-  editingRecord.value = null
+  feedingSheetMode.value = 'edit'
+  feedingSheetType.value = session.type
   editingFeedingSession.value = session
-  recordSheetOpen.value = true
+  feedingSheetOpen.value = true
 }
 
 function closeRecordSheet() {
   recordSheetOpen.value = false
 }
 
-async function handleRecordSave(payload: { action: 'record'; amount?: number; timeValue: string; note: string } | { action: 'feeding'; amount: number }) {
-  if (payload.action === 'feeding') {
-    feedingSessionSaving.value = true
-    setTimeout(() => {
-      if (recordSheetMode.value === 'add') {
-        if (activeCatId.value != null) {
-          feedingSessions.push({
-            id: nextSessionId++,
-            catId: activeCatId.value,
-            type: recordSheetType.value as 'water' | 'food',
-            givenAmount: payload.amount,
-            unit: recordSheetType.value === 'water' ? 'ml' : 'g',
-            givenAt: new Date().toISOString(),
-            updatedAt: null,
-          })
-        }
-      } else if (editingFeedingSession.value) {
-        const target = feedingSessions.find((s) => s.id === editingFeedingSession.value!.id)
-        if (target) {
-          target.givenAmount = payload.amount
-          target.updatedAt = new Date().toISOString()
-        }
-      }
-      feedingSessionSaving.value = false
-      closeRecordSheet()
-    }, 400)
-    return
-  }
+function closeFeedingSheet() {
+  feedingSheetOpen.value = false
+}
 
+function switchRecordToFeeding() {
+  if (recordSheetType.value !== 'water' && recordSheetType.value !== 'food') return
+  closeRecordSheet()
+  openStartFeedingSession(recordSheetType.value)
+}
+
+function switchFeedingToRecord() {
+  closeFeedingSheet()
+  openAddRecord(feedingSheetType.value)
+}
+
+function handleRecordSave(payload: { amount?: number; timeValue: string; note: string }) {
   recordSaving.value = true
   setTimeout(() => {
     const isLitter = recordSheetType.value === 'pee' || recordSheetType.value === 'poop'
@@ -263,6 +247,33 @@ async function handleRecordSave(payload: { action: 'record'; amount?: number; ti
     }
     recordSaving.value = false
     closeRecordSheet()
+  }, 400)
+}
+
+function handleFeedingSave(payload: { amount: number }) {
+  feedingSessionSaving.value = true
+  setTimeout(() => {
+    if (feedingSheetMode.value === 'add') {
+      if (activeCatId.value != null) {
+        feedingSessions.push({
+          id: nextSessionId++,
+          catId: activeCatId.value,
+          type: feedingSheetType.value,
+          givenAmount: payload.amount,
+          unit: feedingSheetType.value === 'water' ? 'ml' : 'g',
+          givenAt: new Date().toISOString(),
+          updatedAt: null,
+        })
+      }
+    } else if (editingFeedingSession.value) {
+      const target = feedingSessions.find((s) => s.id === editingFeedingSession.value!.id)
+      if (target) {
+        target.givenAmount = payload.amount
+        target.updatedAt = new Date().toISOString()
+      }
+    }
+    feedingSessionSaving.value = false
+    closeFeedingSheet()
   }, 400)
 }
 
@@ -479,16 +490,27 @@ function resetDemo() {
     :open="recordSheetOpen"
     :mode="recordSheetMode"
     :type="recordSheetType"
-    :action="recordSheetAction"
     :cat-name="activeCatName"
     :record="editingRecord"
-    :feeding-session="editingFeedingSession"
-    :saving="recordSheetAction === 'feeding' ? feedingSessionSaving : recordSaving"
+    :saving="recordSaving"
     @cancel="closeRecordSheet"
     @save="handleRecordSave"
+    @switch-to-feeding="switchRecordToFeeding"
   />
 
-  <CompleteFeedingSessionSheet
+  <StartFeedingSheet
+    :open="feedingSheetOpen"
+    :mode="feedingSheetMode"
+    :type="feedingSheetType"
+    :cat-name="activeCatName"
+    :feeding-session="editingFeedingSession"
+    :saving="feedingSessionSaving"
+    @cancel="closeFeedingSheet"
+    @save="handleFeedingSave"
+    @switch-to-record="switchFeedingToRecord"
+  />
+
+  <CompleteFeedingSheet
     :open="completeSheetOpen"
     :cat-name="activeCatName"
     :session="completingSession"

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import CompleteFeedingSessionSheet from '../../../../../cuter-cat-tiger/src/components/record/CompleteFeedingSessionSheet.vue'
+import CompleteFeedingSheet from '../../../../../cuter-cat-tiger/src/components/record/CompleteFeedingSheet.vue'
 import type { FeedingSession } from '../../../../../cuter-cat-tiger/src/types'
 
 function makeSession(overrides: Partial<FeedingSession> = {}): FeedingSession {
@@ -30,8 +30,8 @@ function seedQuickNotes(type: string, entries: Array<{ text: string; count: numb
 }
 
 const meta = {
-  title: 'Record/CompleteFeedingSessionSheet',
-  component: CompleteFeedingSessionSheet,
+  title: 'Record/CompleteFeedingSheet',
+  component: CompleteFeedingSheet,
   tags: ['autodocs'],
   argTypes: {
     open: {
@@ -53,7 +53,7 @@ const meta = {
     cancel: { action: 'cancel' },
     save: { action: 'save' },
   },
-} satisfies Meta<typeof CompleteFeedingSessionSheet>
+} satisfies Meta<typeof CompleteFeedingSheet>
 
 export default meta
 

@@ -1,0 +1,162 @@
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import type { FeedingSession } from '../../types'
+import BaseSheet from '../ui/BaseSheet.vue'
+import ExpandableField from '../ui/ExpandableField.vue'
+import CalculatorPad from './CalculatorPad.vue'
+
+/**
+ * 先給後測流程 step 1：只記下「給了多少」，建立/編輯一筆 FeedingSession。
+ * 從 RecordFormSheet 拆出來（原本用內部 action state 切換），
+ * 拆開後跟一般紀錄完全獨立：沒有時間、沒有備註、沒有 litter 分支，
+ * 量一律要求 > 0（先給後測不會有「這次給了 0」的情境）。
+ *
+ * 新增模式下畫面頂端仍保留跟「記錄」切換的 pill：
+ * 這裡不是切內部狀態，而是 emit('switch-to-record') 交給呼叫端關掉這個 sheet、換開 RecordFormSheet。
+ */
+
+const props = withDefaults(
+  defineProps<{
+    open: boolean
+    mode: 'add' | 'edit'
+    type: 'water' | 'food'
+    catName: string
+    feedingSession?: FeedingSession | null
+    saving?: boolean
+  }>(),
+  { saving: false, feedingSession: null },
+)
+
+const emit = defineEmits<{
+  cancel: []
+  save: [payload: { amount: number }]
+  'switch-to-record': []
+}>()
+
+const amount = ref('')
+const calcExpanded = ref(true)
+const formInstanceKey = ref(0)
+
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (!isOpen) return
+
+    if (props.mode === 'edit' && props.feedingSession) {
+      amount.value = String(props.feedingSession.givenAmount)
+    } else {
+      amount.value = ''
+    }
+    calcExpanded.value = true
+    formInstanceKey.value += 1
+  },
+  { immediate: true },
+)
+
+const TYPE_FEEDING_LABEL: Record<'water' | 'food', string> = { water: '水', food: '飼料' }
+
+const title = computed(() => {
+  const label = props.mode === 'edit' ? '修改給的量' : '開始餵'
+  return `${label}${TYPE_FEEDING_LABEL[props.type]} · ${props.catName}`
+})
+
+const amountUnit = computed(() => (props.type === 'water' ? 'ml' : 'g'))
+
+function handleSubmit() {
+  const n = parseFloat(amount.value)
+  if (Number.isNaN(n) || n <= 0) return
+  emit('save', { amount: n })
+}
+</script>
+
+<template>
+  <BaseSheet :open="open" :title="title" panel-class="sheet-panel--full" @cancel="emit('cancel')">
+    <form @submit.prevent="handleSubmit">
+      <div v-if="mode === 'add'" class="action-toggle" role="group" aria-label="紀錄方式">
+        <button type="button" class="action-toggle-option" @click="emit('switch-to-record')">
+          {{ type === 'water' ? '記錄喝水' : '記錄飼料' }}
+        </button>
+        <button type="button" class="action-toggle-option active" disabled>
+          {{ type === 'water' ? '開始餵水' : '開始餵飼料' }}
+        </button>
+      </div>
+
+      <div class="field">
+        <ExpandableField v-model:expanded="calcExpanded">
+          <template #summary>
+            <span class="amount-summary-value" :class="{ placeholder: !amount }">
+              {{ amount || amountUnit }}<span v-if="amount"> {{ amountUnit }}</span>
+            </span>
+          </template>
+          <CalculatorPad
+            :key="formInstanceKey"
+            v-model="amount"
+            :type="type"
+            :unit="amountUnit"
+            :saving="saving"
+            require-positive
+            @collapse="calcExpanded = false"
+          />
+        </ExpandableField>
+      </div>
+
+      <div class="sheet-actions">
+        <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
+        <button
+          type="button"
+          class="btn primary"
+          :class="{ food: type === 'food' }"
+          :disabled="saving"
+          @click="handleSubmit"
+        >
+          {{ saving ? '儲存中…' : '儲存' }}
+        </button>
+      </div>
+    </form>
+  </BaseSheet>
+</template>
+
+<style scoped>
+.action-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  gap: 4px;
+}
+
+.action-toggle-option {
+  min-height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.action-toggle-option.active {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
+}
+
+.action-toggle-option:disabled {
+  cursor: default;
+}
+
+.amount-summary-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+
+.amount-summary-value.placeholder {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+</style>

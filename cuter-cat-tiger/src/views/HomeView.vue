@@ -8,8 +8,9 @@ import DailyStats from '../components/stats/DailyStats.vue'
 import AllCatsStatsSheet from '../components/stats/AllCatsStatsSheet.vue'
 import RecordList from '../components/record/RecordList.vue'
 import RecordFormSheet from '../components/record/RecordFormSheet.vue'
+import StartFeedingSheet from '../components/record/StartFeedingSheet.vue'
 import PendingFeedingList from '../components/record/PendingFeedingList.vue'
-import CompleteFeedingSessionSheet from '../components/record/CompleteFeedingSessionSheet.vue'
+import CompleteFeedingSheet from '../components/record/CompleteFeedingSheet.vue'
 import { recordNoteUsage } from '../composables/useQuickNotes'
 import ConfirmSheet from '../components/ui/ConfirmSheet.vue'
 import { useCats } from '../composables/useCats'
@@ -94,67 +95,63 @@ function handleAllCatsStatsSelectCat(catId: number) {
 const recordSheetOpen = ref(false)
 const recordSheetMode = ref<'add' | 'edit'>('add')
 const recordSheetType = ref<RecordType>('water')
-const recordSheetAction = ref<'record' | 'feeding'>('record')
 const editingRecord = ref<CatRecord | null>(null)
+
+const feedingSheetOpen = ref(false)
+const feedingSheetMode = ref<'add' | 'edit'>('add')
+const feedingSheetType = ref<'water' | 'food'>('water')
 const editingFeedingSession = ref<FeedingSession | null>(null)
 
 function openAddRecord(type: RecordType) {
   recordSheetMode.value = 'add'
   recordSheetType.value = type
-  recordSheetAction.value = 'record'
   editingRecord.value = null
-  editingFeedingSession.value = null
   recordSheetOpen.value = true
 }
 
 function openStartFeedingSession(type: 'water' | 'food') {
-  recordSheetMode.value = 'add'
-  recordSheetType.value = type
-  recordSheetAction.value = 'feeding'
-  editingRecord.value = null
+  feedingSheetMode.value = 'add'
+  feedingSheetType.value = type
   editingFeedingSession.value = null
-  recordSheetOpen.value = true
+  feedingSheetOpen.value = true
 }
 
 function openEditRecord(record: CatRecord) {
   recordSheetMode.value = 'edit'
   recordSheetType.value = record.type
-  recordSheetAction.value = 'record'
   editingRecord.value = record
-  editingFeedingSession.value = null
   recordSheetOpen.value = true
 }
 
 function openEditFeedingSession(session: FeedingSession) {
-  recordSheetMode.value = 'edit'
-  recordSheetType.value = session.type
-  recordSheetAction.value = 'feeding'
-  editingRecord.value = null
+  feedingSheetMode.value = 'edit'
+  feedingSheetType.value = session.type
   editingFeedingSession.value = session
-  recordSheetOpen.value = true
+  feedingSheetOpen.value = true
 }
 
 function closeRecordSheet() {
   recordSheetOpen.value = false
 }
 
-async function handleRecordSave(payload: { action: 'record'; amount?: number; timeValue: string; note: string } | { action: 'feeding'; amount: number }) {
-  if (payload.action === 'feeding') {
-    if (recordSheetMode.value === 'add') {
-      if (activeCatId.value == null) return
-      await startSession({
-        catId: activeCatId.value,
-        type: recordSheetType.value as 'water' | 'food',
-        amount: payload.amount,
-        unit: recordSheetType.value === 'water' ? 'ml' : 'g',
-      })
-    } else if (editingFeedingSession.value) {
-      await editSession(editingFeedingSession.value.id, { amount: payload.amount })
-    }
-    closeRecordSheet()
-    return
-  }
+function closeFeedingSheet() {
+  feedingSheetOpen.value = false
+}
 
+// Sheet 頂端的 pill 只是換一顆 sheet，不是切內部狀態：關掉目前這個，開另一個。
+// 兩邊本來就會把 amount 清空重填，所以切換時沒有輸入內容需要保留。
+function switchRecordToFeeding() {
+  if (recordSheetType.value !== 'water' && recordSheetType.value !== 'food') return
+  closeRecordSheet()
+  openStartFeedingSession(recordSheetType.value)
+}
+
+function switchFeedingToRecord() {
+  closeFeedingSheet()
+  openAddRecord(feedingSheetType.value)
+}
+
+async function handleRecordSave(payload: { amount?: number; timeValue: string; note: string }) {
   const occurredAt = dateTimeLocalValueToIso(payload.timeValue)
   const isLitter = recordSheetType.value === 'pee' || recordSheetType.value === 'poop'
 
@@ -176,6 +173,21 @@ async function handleRecordSave(payload: { action: 'record'; amount?: number; ti
   }
   recordNoteUsage(recordSheetType.value, payload.note)
   closeRecordSheet()
+}
+
+async function handleFeedingSave(payload: { amount: number }) {
+  if (feedingSheetMode.value === 'add') {
+    if (activeCatId.value == null) return
+    await startSession({
+      catId: activeCatId.value,
+      type: feedingSheetType.value,
+      amount: payload.amount,
+      unit: feedingSheetType.value === 'water' ? 'ml' : 'g',
+    })
+  } else if (editingFeedingSession.value) {
+    await editSession(editingFeedingSession.value.id, { amount: payload.amount })
+  }
+  closeFeedingSheet()
 }
 
 const completeSheetOpen = ref(false)
@@ -340,16 +352,27 @@ async function handleConfirmDelete() {
     :open="recordSheetOpen"
     :mode="recordSheetMode"
     :type="recordSheetType"
-    :action="recordSheetAction"
     :cat-name="activeCatName"
     :record="editingRecord"
-    :feeding-session="editingFeedingSession"
-    :saving="recordSheetAction === 'feeding' ? feedingSessionSaving : saving"
+    :saving="saving"
     @cancel="closeRecordSheet"
     @save="handleRecordSave"
+    @switch-to-feeding="switchRecordToFeeding"
   />
 
-  <CompleteFeedingSessionSheet
+  <StartFeedingSheet
+    :open="feedingSheetOpen"
+    :mode="feedingSheetMode"
+    :type="feedingSheetType"
+    :cat-name="activeCatName"
+    :feeding-session="editingFeedingSession"
+    :saving="feedingSessionSaving"
+    @cancel="closeFeedingSheet"
+    @save="handleFeedingSave"
+    @switch-to-record="switchFeedingToRecord"
+  />
+
+  <CompleteFeedingSheet
     :open="completeSheetOpen"
     :cat-name="activeCatName"
     :session="completingSession"

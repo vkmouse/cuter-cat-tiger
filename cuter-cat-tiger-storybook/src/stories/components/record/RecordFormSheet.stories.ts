@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
 import RecordFormSheet from '../../../../../cuter-cat-tiger/src/components/record/RecordFormSheet.vue'
-import type { CatRecord, FeedingSession } from '../../../../../cuter-cat-tiger/src/types'
+import type { CatRecord } from '../../../../../cuter-cat-tiger/src/types'
 
 function makeRecord(overrides: Partial<CatRecord>): CatRecord {
   return {
@@ -34,7 +34,7 @@ const meta = {
     type: {
       control: 'radio',
       options: ['water', 'food', 'pee', 'poop'],
-      description: 'water/food 會顯示「記錄」與「開始餵」切換；pee/poop 只有一般紀錄。',
+      description: 'water/food 新增模式下會顯示可切去 StartFeedingSheet 的 pill；pee/poop 只有一般紀錄。',
     },
     catName: {
       control: 'text',
@@ -44,21 +44,13 @@ const meta = {
       control: 'object',
       description: 'edit 模式下用來預填數值、時間、備註的原始紀錄。',
     },
-    feedingSession: {
-      control: 'object',
-      description: '編輯先給後測 session 時用來預填給的量。',
-    },
-    action: {
-      control: 'radio',
-      options: ['record', 'feeding'],
-      description: 'water/food 開啟時的預設操作；一般記錄預設直接展開計算機。',
-    },
     saving: {
       control: 'boolean',
       description: '儲存中時按鈕文字改為「儲存中…」且 disabled。',
     },
     cancel: { action: 'cancel' },
     save: { action: 'save' },
+    'switch-to-feeding': { action: 'switch-to-feeding' },
   },
 } satisfies Meta<typeof RecordFormSheet>
 
@@ -71,26 +63,6 @@ export const AddWater: Story = {
     open: true,
     mode: 'add',
     type: 'water',
-    catName: '橘子',
-  },
-}
-
-export const StartWater: Story = {
-  args: {
-    open: true,
-    mode: 'add',
-    type: 'water',
-    action: 'feeding',
-    catName: '橘子',
-  },
-}
-
-export const StartFood: Story = {
-  args: {
-    open: true,
-    mode: 'add',
-    type: 'food',
-    action: 'feeding',
     catName: '橘子',
   },
 }
@@ -135,26 +107,6 @@ export const EditWater: Story = {
       note: '換了新的水碗',
       occurredAt: '2026-08-19T02:30:00.000Z',
     }),
-  },
-}
-
-
-export const EditFeedingSession: Story = {
-  args: {
-    open: true,
-    mode: 'edit',
-    type: 'water',
-    action: 'feeding',
-    catName: '橘子',
-    feedingSession: {
-      id: 1,
-      catId: 1,
-      type: 'water',
-      givenAmount: 50,
-      unit: 'ml',
-      givenAt: new Date().toISOString(),
-      updatedAt: null,
-    } satisfies FeedingSession,
   },
 }
 
