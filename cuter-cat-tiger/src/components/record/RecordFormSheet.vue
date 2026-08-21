@@ -118,7 +118,6 @@ const title = computed(() => {
   return `${label} · ${props.catName}`
 })
 
-const amountLabel = computed(() => (props.type === 'water' ? '單位 ml' : '單位 g'))
 const amountUnit = computed(() => (props.type === 'water' ? 'ml' : 'g'))
 
 function handleSubmit() {
@@ -170,9 +169,8 @@ function handleSubmit() {
         <div class="field">
           <ExpandableField v-model:expanded="calcExpanded">
             <template #summary>
-              <span class="amount-summary-label">{{ amountLabel }}</span>
-              <span class="amount-summary-value">
-                {{ amount }}<span v-if="amount"> {{ amountUnit }}</span>
+              <span class="amount-summary-value" :class="{ placeholder: !amount }">
+                {{ amount || amountUnit }}<span v-if="amount"> {{ amountUnit }}</span>
               </span>
             </template>
             <CalculatorPad
@@ -277,16 +275,14 @@ function handleSubmit() {
 }
 
 
-.amount-summary-label {
-  font-size: 0.78rem;
-  color: var(--ink-soft);
-  display: block;
-  margin-bottom: 2px;
-}
-
 .amount-summary-value {
   font-family: var(--font-mono);
   font-weight: 600;
   font-size: 0.98rem;
+}
+
+.amount-summary-value.placeholder {
+  color: var(--ink-soft);
+  font-weight: 500;
 }
 </style>
