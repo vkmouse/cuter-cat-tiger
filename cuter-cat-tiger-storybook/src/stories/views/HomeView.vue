@@ -15,7 +15,6 @@ import AllCatsStatsSheet from '../../../../cuter-cat-tiger/src/components/stats/
 import RecordList from '../../../../cuter-cat-tiger/src/components/record/RecordList.vue'
 import RecordFormSheet from '../../../../cuter-cat-tiger/src/components/record/RecordFormSheet.vue'
 import PendingFeedingList from '../../../../cuter-cat-tiger/src/components/record/PendingFeedingList.vue'
-import FeedingSessionFormSheet from '../../../../cuter-cat-tiger/src/components/record/FeedingSessionFormSheet.vue'
 import CompleteFeedingSessionSheet from '../../../../cuter-cat-tiger/src/components/record/CompleteFeedingSessionSheet.vue'
 import ConfirmSheet from '../../../../cuter-cat-tiger/src/components/ui/ConfirmSheet.vue'
 import { addDaysToDateKey, dateKeyFromIso, dateTimeLocalValueToIso, todayDateKey } from '../../../../cuter-cat-tiger/src/utils/date'
@@ -160,30 +159,86 @@ function handleAllCatsStatsSelectCat(catId: number) {
 const recordSheetOpen = ref(false)
 const recordSheetMode = ref<'add' | 'edit'>('add')
 const recordSheetType = ref<RecordType>('water')
+const recordSheetAction = ref<'record' | 'feeding'>('record')
 const editingRecord = ref<CatRecord | null>(null)
-const saving = ref(false)
+const editingFeedingSession = ref<FeedingSession | null>(null)
+const recordSaving = ref(false)
+const feedingSessionSaving = ref(false)
 
 function openAddRecord(type: RecordType) {
   recordSheetMode.value = 'add'
   recordSheetType.value = type
+  recordSheetAction.value = 'record'
   editingRecord.value = null
+  editingFeedingSession.value = null
   recordSheetOpen.value = true
 }
+
+function openStartFeedingSession(type: 'water' | 'food') {
+  recordSheetMode.value = 'add'
+  recordSheetType.value = type
+  recordSheetAction.value = 'feeding'
+  editingRecord.value = null
+  editingFeedingSession.value = null
+  recordSheetOpen.value = true
+}
+
 function openEditRecord(record: CatRecord) {
   recordSheetMode.value = 'edit'
   recordSheetType.value = record.type
+  recordSheetAction.value = 'record'
   editingRecord.value = record
+  editingFeedingSession.value = null
   recordSheetOpen.value = true
 }
+
+function openEditFeedingSession(session: FeedingSession) {
+  recordSheetMode.value = 'edit'
+  recordSheetType.value = session.type
+  recordSheetAction.value = 'feeding'
+  editingRecord.value = null
+  editingFeedingSession.value = session
+  recordSheetOpen.value = true
+}
+
 function closeRecordSheet() {
   recordSheetOpen.value = false
 }
 
-function handleRecordSave(payload: { amount?: number; timeValue: string; note: string }) {
-  const occurredAt = dateTimeLocalValueToIso(payload.timeValue)
-  const isLitter = recordSheetType.value === 'pee' || recordSheetType.value === 'poop'
-  saving.value = true
+async function handleRecordSave(payload: { action: 'record'; amount?: number; timeValue: string; note: string } | { action: 'feeding'; amount: number }) {
+  if (payload.action === 'feeding') {
+    feedingSessionSaving.value = true
+    setTimeout(() => {
+      if (recordSheetMode.value === 'add') {
+        if (activeCatId.value != null) {
+          feedingSessions.push({
+            id: nextSessionId++,
+            catId: activeCatId.value,
+            type: recordSheetType.value as 'water' | 'food',
+            givenAmount: payload.amount,
+            unit: recordSheetType.value === 'water' ? 'ml' : 'g',
+            givenAt: new Date().toISOString(),
+            updatedAt: null,
+          })
+        }
+      } else if (editingFeedingSession.value) {
+        const target = feedingSessions.find((s) => s.id === editingFeedingSession.value!.id)
+        if (target) {
+          target.givenAmount = payload.amount
+          target.updatedAt = new Date().toISOString()
+        }
+      }
+      feedingSessionSaving.value = false
+      closeRecordSheet()
+    }, 400)
+    return
+  }
+
+  recordSaving.value = true
   setTimeout(() => {
+    const isLitter = recordSheetType.value === 'pee' || recordSheetType.value === 'poop'
+    const occurredAt = dateTimeLocalValueToIso(payload.timeValue)
+
     if (recordSheetMode.value === 'add') {
       if (activeCatId.value != null) {
         records.push({
@@ -206,58 +261,8 @@ function handleRecordSave(payload: { amount?: number; timeValue: string; note: s
         target.updatedAt = new Date().toISOString()
       }
     }
-    saving.value = false
+    recordSaving.value = false
     closeRecordSheet()
-  }, 400)
-}
-
-// ---------- 「先給後測」餵食 session：開始／編輯給的量 ----------
-const feedingSheetOpen = ref(false)
-const feedingSheetMode = ref<'start' | 'edit'>('start')
-const feedingSheetType = ref<'water' | 'food'>('water')
-const editingFeedingSession = ref<FeedingSession | null>(null)
-const feedingSessionSaving = ref(false)
-
-function openStartFeedingSession(type: 'water' | 'food') {
-  feedingSheetMode.value = 'start'
-  feedingSheetType.value = type
-  editingFeedingSession.value = null
-  feedingSheetOpen.value = true
-}
-function openEditFeedingSession(session: FeedingSession) {
-  feedingSheetMode.value = 'edit'
-  feedingSheetType.value = session.type
-  editingFeedingSession.value = session
-  feedingSheetOpen.value = true
-}
-function closeFeedingSheet() {
-  feedingSheetOpen.value = false
-}
-
-function handleFeedingSheetSave(amount: number) {
-  feedingSessionSaving.value = true
-  setTimeout(() => {
-    if (feedingSheetMode.value === 'start') {
-      if (activeCatId.value != null) {
-        feedingSessions.push({
-          id: nextSessionId++,
-          catId: activeCatId.value,
-          type: feedingSheetType.value,
-          givenAmount: amount,
-          unit: feedingSheetType.value === 'water' ? 'ml' : 'g',
-          givenAt: new Date().toISOString(),
-          updatedAt: null,
-        })
-      }
-    } else if (editingFeedingSession.value) {
-      const target = feedingSessions.find((s) => s.id === editingFeedingSession.value!.id)
-      if (target) {
-        target.givenAmount = amount
-        target.updatedAt = new Date().toISOString()
-      }
-    }
-    feedingSessionSaving.value = false
-    closeFeedingSheet()
   }, 400)
 }
 
@@ -411,7 +416,6 @@ function resetDemo() {
   activeCatId.value = cats[0]?.id ?? null
   selectedDate.value = todayDateKey()
   recordSheetOpen.value = false
-  feedingSheetOpen.value = false
   completeSheetOpen.value = false
   cancelSessionConfirmOpen.value = false
   addCatOpen.value = false
@@ -458,15 +462,6 @@ function resetDemo() {
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c-4.4 0-7-1.4-7-3.4 0-1.3 1-2.1 2.3-2.5-.6-.6-1-1.4-1-2.3 0-1.7 1.5-2.9 3.2-2.8-.2-.5-.3-1-.3-1.6 0-1.9 1.6-3.4 3.5-3.4 1.7 0 3.1 1.2 3.4 2.8 1.6 0 2.9 1.2 2.9 2.7 0 .8-.3 1.5-.9 2 1.3.4 2.3 1.3 2.3 2.6 0 2-2.6 3.4-7 3.4-.5.3-1 .5-1.4.5s-.9-.2-1-.5z" /></svg>
           記錄大便
         </button>
-        <!-- 「先給後測」：現在只知道給了多少，等一段時間量出剩多少後才會變成一筆真正的紀錄。 -->
-        <button class="stamp-btn water ghost-outline" :disabled="!activeCatId" @click="openStartFeedingSession('water')">
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
-          開始餵水
-        </button>
-        <button class="stamp-btn food ghost-outline" :disabled="!activeCatId" @click="openStartFeedingSession('food')">
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
-          開始餵飼料
-        </button>
       </div>
 
       <PendingFeedingList
@@ -484,22 +479,13 @@ function resetDemo() {
     :open="recordSheetOpen"
     :mode="recordSheetMode"
     :type="recordSheetType"
+    :action="recordSheetAction"
     :cat-name="activeCatName"
     :record="editingRecord"
-    :saving="saving"
+    :feeding-session="editingFeedingSession"
+    :saving="recordSheetAction === 'feeding' ? feedingSessionSaving : recordSaving"
     @cancel="closeRecordSheet"
     @save="handleRecordSave"
-  />
-
-  <FeedingSessionFormSheet
-    :open="feedingSheetOpen"
-    :mode="feedingSheetMode"
-    :type="feedingSheetType"
-    :cat-name="activeCatName"
-    :session="editingFeedingSession"
-    :saving="feedingSessionSaving"
-    @cancel="closeFeedingSheet"
-    @save="handleFeedingSheetSave"
   />
 
   <CompleteFeedingSessionSheet
@@ -652,8 +638,4 @@ function resetDemo() {
   cursor: not-allowed;
 }
 
-/* 「開始餵水/飼料」是先給後測、還沒完成的動作，用虛線邊框跟「記錄喝水/飼料」的實線做出區隔。 */
-.stamp-btn.ghost-outline {
-  border-style: dashed;
-}
 </style>

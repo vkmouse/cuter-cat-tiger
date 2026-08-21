@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { CatRecord, RecordType } from '../../types'
+import type { CatRecord, FeedingSession, RecordType } from '../../types'
 import { nowDateTimeLocalValue, isoToDateTimeLocalValue } from '../../utils/date'
 import { getQuickNotes } from '../../composables/useQuickNotes'
 import BaseSheet from '../ui/BaseSheet.vue'
@@ -14,41 +14,60 @@ const props = defineProps<{
   type: RecordType
   catName: string
   record?: CatRecord | null
+  feedingSession?: FeedingSession | null
+  action?: 'record' | 'feeding'
   saving?: boolean
 }>()
 
 const emit = defineEmits<{
   cancel: []
-  save: [payload: { amount?: number; timeValue: string; note: string }]
+  save: [
+    payload:
+      | { action: 'record'; amount?: number; timeValue: string; note: string }
+      | { action: 'feeding'; amount: number },
+  ]
 }>()
 
 const amount = ref('')
 const timeValue = ref('')
 const note = ref('')
-// 每次開啟時重新讀取，確保剛達到門檻的備註能立即出現。
+const action = ref<'record' | 'feeding'>('record')
 const quickNotes = ref<string[]>([])
-// 計算機一律預設收合，點一下才展開；DateTimePicker 的展開狀態是它自己內部管理的，
-// 這裡改用 formInstanceKey 讓它每次開啟時整個重新掛載，藉此把內部的展開狀態一併重置。
 const calcExpanded = ref(false)
 const formInstanceKey = ref(0)
 
 const isLitter = (t: RecordType) => t === 'pee' || t === 'poop'
+const isFeedingType = computed(() => props.type === 'water' || props.type === 'food')
+const isFeedingEdit = computed(() => props.mode === 'edit' && !!props.feedingSession)
+const toggleDisabled = computed(() => props.mode === 'edit')
 
 watch(
   () => props.open,
   (isOpen) => {
     if (!isOpen) return
-    if (props.mode === 'edit' && props.record) {
+
+    action.value = props.action ?? 'record'
+    if (props.mode === 'edit' && props.feedingSession) {
+      action.value = 'feeding'
+      amount.value = String(props.feedingSession.givenAmount)
+      timeValue.value = ''
+      note.value = ''
+      quickNotes.value = []
+      calcExpanded.value = true
+    } else if (props.mode === 'edit' && props.record) {
       amount.value = String(props.record.amount)
       timeValue.value = isoToDateTimeLocalValue(props.record.occurredAt)
       note.value = props.record.note ?? ''
+      quickNotes.value = getQuickNotes(props.type)
+      calcExpanded.value = false
     } else {
       amount.value = ''
       timeValue.value = nowDateTimeLocalValue()
       note.value = ''
+      quickNotes.value = getQuickNotes(props.type)
+      calcExpanded.value = action.value === 'feeding'
     }
-    quickNotes.value = getQuickNotes(props.type)
-    calcExpanded.value = false
+
     formInstanceKey.value += 1
   },
   { immediate: true },
@@ -56,6 +75,21 @@ watch(
 
 function applyQuickNote(text: string) {
   note.value = text
+}
+
+function selectAction(next: 'record' | 'feeding') {
+  if (toggleDisabled.value || !isFeedingType.value) return
+  action.value = next
+  amount.value = ''
+  calcExpanded.value = next === 'feeding'
+  if (next === 'record') {
+    timeValue.value = nowDateTimeLocalValue()
+    note.value = ''
+    quickNotes.value = getQuickNotes(props.type)
+  } else {
+    quickNotes.value = []
+  }
+  formInstanceKey.value += 1
 }
 
 const TYPE_ACTION_LABEL: Record<RecordType, string> = {
@@ -70,61 +104,100 @@ const TYPE_EDIT_LABEL: Record<RecordType, string> = {
   pee: '修改尿尿紀錄',
   poop: '修改大便紀錄',
 }
+const TYPE_FEEDING_LABEL: Record<'water' | 'food', string> = {
+  water: '水',
+  food: '飼料',
+}
 
 const title = computed(() => {
-  const action = props.mode === 'add' ? TYPE_ACTION_LABEL[props.type] : TYPE_EDIT_LABEL[props.type]
-  return `${action} · ${props.catName}`
+  if (action.value === 'feeding' && isFeedingType.value) {
+    const label = isFeedingEdit.value ? '修改給的量' : '開始餵'
+    return `${label}${TYPE_FEEDING_LABEL[props.type as 'water' | 'food']} · ${props.catName}`
+  }
+  const label = props.mode === 'add' ? TYPE_ACTION_LABEL[props.type] : TYPE_EDIT_LABEL[props.type]
+  return `${label} · ${props.catName}`
 })
 
-const amountLabel = computed(() => (props.type === 'water' ? '數量 (ml)' : '數量 (g)'))
+const amountLabel = computed(() => {
+  if (action.value === 'feeding') {
+    return props.type === 'water' ? '這次給多少 (ml)' : '這次給多少 (g)'
+  }
+  return props.type === 'water' ? '數量 (ml)' : '數量 (g)'
+})
 const amountUnit = computed(() => (props.type === 'water' ? 'ml' : 'g'))
 
 function handleSubmit() {
-  if (!timeValue.value) return
-  if (isLitter(props.type)) {
-    emit('save', { timeValue: timeValue.value, note: note.value.trim() })
+  if (action.value === 'feeding') {
+    const n = parseFloat(amount.value)
+    if (Number.isNaN(n) || n <= 0) return
+    emit('save', { action: 'feeding', amount: n })
     return
   }
+
+  if (!timeValue.value) return
+  if (isLitter(props.type)) {
+    emit('save', { action: 'record', timeValue: timeValue.value, note: note.value.trim() })
+    return
+  }
+
   const n = parseFloat(amount.value)
   if (Number.isNaN(n)) return
-  // 新增走 POST /api/records，後端規則是「amount 必須 > 0」，這裡先擋掉避免打一次無效的請求。
-  // 編輯（PATCH）則不能用同一條規則：這筆紀錄如果是「先給後測」量測完成算出來的，
-  // amount 本來就可能是 0 或負數，編輯時（哪怕只是想改備註）不能因此被擋下來。
   if (props.mode === 'add' && n <= 0) return
-  emit('save', { amount: n, timeValue: timeValue.value, note: note.value.trim() })
+  emit('save', { action: 'record', amount: n, timeValue: timeValue.value, note: note.value.trim() })
 }
 </script>
 
 <template>
   <BaseSheet :open="open" :title="title" @cancel="emit('cancel')">
     <form @submit.prevent="handleSubmit">
-      <div class="field">
-        <label>時間</label>
-        <DateTimePicker :key="formInstanceKey" v-model="timeValue" />
-      </div>
-      <div class="field">
-        <label for="fNote">備註</label>
-        <textarea id="fNote" v-model="note" placeholder="例如：湯罐加水" />
-        <div
-          v-if="quickNotes.length"
-          class="pill-group quick-notes"
-          :class="{ food: type === 'food', litter: isLitter(type) }"
+      <div v-if="isFeedingType" class="action-toggle" role="group" aria-label="紀錄方式">
+        <button
+          type="button"
+          class="action-toggle-option"
+          :class="{ active: action === 'record' }"
+          :disabled="toggleDisabled"
+          @click="selectAction('record')"
         >
-          <button
-            v-for="text in quickNotes"
-            :key="text"
-            type="button"
-            class="pill"
-            :class="{ active: note === text }"
-            @click="applyQuickNote(text)"
-          >
-            {{ text }}
-          </button>
-        </div>
+          {{ type === 'water' ? '記錄喝水' : '記錄飼料' }}
+        </button>
+        <button
+          type="button"
+          class="action-toggle-option"
+          :class="{ active: action === 'feeding' }"
+          :disabled="toggleDisabled"
+          @click="selectAction('feeding')"
+        >
+          {{ type === 'water' ? '開始餵水' : '開始餵飼料' }}
+        </button>
       </div>
 
-      <!-- 水/飼料：用計算機鍵盤輸入數量，按「確定」兩次才會真的送出
-           （第一次算出結果、第二次才是儲存），因此這裡不再另外放「儲存」按鈕。 -->
+      <template v-if="action === 'record'">
+        <div class="field">
+          <label>時間</label>
+          <DateTimePicker :key="formInstanceKey" v-model="timeValue" />
+        </div>
+        <div class="field">
+          <label for="fNote">備註</label>
+          <textarea id="fNote" v-model="note" placeholder="例如：湯罐加水" />
+          <div
+            v-if="quickNotes.length"
+            class="pill-group quick-notes"
+            :class="{ food: type === 'food', litter: isLitter(type) }"
+          >
+            <button
+              v-for="text in quickNotes"
+              :key="text"
+              type="button"
+              class="pill"
+              :class="{ active: note === text }"
+              @click="applyQuickNote(text)"
+            >
+              {{ text }}
+            </button>
+          </div>
+        </div>
+      </template>
+
       <template v-if="!isLitter(type)">
         <div class="field">
           <ExpandableField v-model:expanded="calcExpanded">
@@ -135,11 +208,12 @@ function handleSubmit() {
               </span>
             </template>
             <CalculatorPad
+              :key="formInstanceKey"
               v-model="amount"
               :type="type === 'water' ? 'water' : 'food'"
               :unit="amountUnit"
               :saving="saving"
-              :require-positive="mode === 'add'"
+              :require-positive="mode === 'add' || action === 'feeding'"
               @confirm="handleSubmit"
             />
           </ExpandableField>
@@ -160,11 +234,42 @@ function handleSubmit() {
 </template>
 
 <style scoped>
+.action-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  gap: 4px;
+}
+
+.action-toggle-option {
+  min-height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.action-toggle-option.active {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
+}
+
+.action-toggle-option:disabled {
+  cursor: default;
+}
+
 .quick-notes {
   margin-top: 8px;
 }
 
-/* 水/飼料表單沒有另外的「儲存」鍵（計算機的確定鍵兼任），取消鍵改成置中的次要按鈕。 */
 .sheet-actions.minimal {
   justify-content: center;
 }
