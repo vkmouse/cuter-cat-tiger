@@ -72,7 +72,7 @@ function handleConfirm() {
 </script>
 
 <template>
-  <BaseSheet :open="open" :title="title" @cancel="emit('cancel')">
+  <BaseSheet :open="open" :title="title" panel-class="sheet-panel--full" @cancel="emit('cancel')">
     <template v-if="session">
       <p class="given-context">這次給了 {{ round1(session.givenAmount) }} {{ session.unit }}</p>
 

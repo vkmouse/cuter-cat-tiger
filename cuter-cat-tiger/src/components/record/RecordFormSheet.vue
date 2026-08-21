@@ -142,7 +142,7 @@ function handleSubmit() {
 </script>
 
 <template>
-  <BaseSheet :open="open" :title="title" @cancel="emit('cancel')">
+  <BaseSheet :open="open" :title="title" panel-class="sheet-panel--full" @cancel="emit('cancel')">
     <form @submit.prevent="handleSubmit">
       <div v-if="isFeedingType" class="action-toggle" role="group" aria-label="紀錄方式">
         <button

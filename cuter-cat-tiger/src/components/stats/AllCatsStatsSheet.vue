@@ -54,7 +54,7 @@ function handleSelect(catId: number) {
     :open="open"
     :title="`今日總覽 · ${formatDateLabel(date)}`"
     elevated
-    panel-class="allcats-stats-panel"
+    panel-class="allcats-stats-panel sheet-panel--full"
     @cancel="emit('cancel')"
   >
     <div v-if="loading" class="state-msg">載入中…</div>
@@ -116,7 +116,6 @@ function handleSelect(catId: number) {
 <style>
 /* sheet-panel 是 BaseSheet 的 root，因此需要非 scoped CSS。 */
 .allcats-stats-panel {
-  max-height: 72vh;
   padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
   overflow-y: auto;
 }

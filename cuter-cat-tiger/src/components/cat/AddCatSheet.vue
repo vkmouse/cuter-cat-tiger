@@ -33,7 +33,7 @@ function handleSubmit() {
 </script>
 
 <template>
-  <BaseSheet :open="open" title="新增貓咪" @cancel="emit('cancel')">
+  <BaseSheet :open="open" title="新增貓咪" panel-class="sheet-panel--compact" @cancel="emit('cancel')">
     <form @submit.prevent="handleSubmit">
       <div class="field">
         <label for="fCatName">貓咪名字</label>

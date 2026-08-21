@@ -67,6 +67,11 @@ button {
   z-index: 12;
 }
 
+/* 兩段固定高度分級，取代各 sheet 依內容自動撐高的做法：
+   同一層級的 sheet（無論內容多寡）頂邊永遠對齊在同一位置，
+   內容不足時用 padding 呼吸，內容過多時交給 .sheet-content 內部捲動。
+   --compact：確認、新增/編輯貓咪等輕量操作
+   --full：紀錄表單、完成餵食、今日總覽等需要較多輸入/資料的畫面 */
 .sheet-panel {
   position: fixed;
   left: 0;
@@ -78,6 +83,7 @@ button {
   border-radius: 22px 22px 0 0;
   box-shadow: 0 -10px 30px rgba(38, 48, 42, 0.25);
   padding: 10px 22px 0;
+  height: var(--sheet-h-full);
   max-height: min(92dvh, 760px);
   display: flex;
   flex-direction: column;
@@ -93,6 +99,14 @@ button {
 
 .sheet-panel--elevated {
   z-index: 13;
+}
+
+.sheet-panel--compact {
+  height: var(--sheet-h-compact);
+}
+
+.sheet-panel--full {
+  height: var(--sheet-h-full);
 }
 
 .sheet-handle {

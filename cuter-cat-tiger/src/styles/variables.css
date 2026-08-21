@@ -18,6 +18,11 @@
   --radius-lg: 18px;
   --radius-md: 12px;
 
+  /* Bottom sheet 兩段固定高度：所有 sheet 依內容量歸類到其中一段，
+     讓面板頂邊在同一層級間保持一致，不再隨內容多寡浮動。 */
+  --sheet-h-compact: min(46vh, 380px);
+  --sheet-h-full: min(88vh, 760px);
+
   --font-heading: 'Fraunces', serif;
   --font-mono: 'IBM Plex Mono', monospace;
   --font-body: 'Noto Sans TC', system-ui, -apple-system, sans-serif;

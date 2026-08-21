@@ -27,7 +27,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <BaseSheet :open="open" :title="title" elevated panel-class="confirm-sheet-panel" @cancel="emit('cancel')">
+  <BaseSheet :open="open" :title="title" elevated panel-class="confirm-sheet-panel sheet-panel--compact" @cancel="emit('cancel')">
     <p v-if="message" class="message">{{ message }}</p>
     <div class="sheet-actions">
       <button type="button" class="btn ghost" @click="emit('cancel')">{{ cancelText }}</button>
