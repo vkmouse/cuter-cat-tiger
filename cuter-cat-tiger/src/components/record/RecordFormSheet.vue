@@ -194,7 +194,7 @@ function handleSubmit() {
         </div>
         <div class="field">
           <label for="fNote">備註</label>
-          <textarea id="fNote" v-model="note" />
+          <input id="fNote" v-model="note" type="text" />
           <div
             v-if="quickNotes.length"
             class="pill-group quick-notes"

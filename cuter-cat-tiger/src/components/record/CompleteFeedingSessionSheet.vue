@@ -83,7 +83,7 @@ function handleConfirm() {
 
       <div class="field">
         <label for="fRemainingNote">備註</label>
-        <textarea id="fRemainingNote" v-model="note" />
+        <input id="fRemainingNote" v-model="note" type="text" />
         <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: session.type === 'food' }">
           <button
             v-for="text in quickNotes"

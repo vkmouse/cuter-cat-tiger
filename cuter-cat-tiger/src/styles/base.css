@@ -11,8 +11,7 @@
   -webkit-touch-callout: none;
 }
 
-input,
-textarea {
+input {
   -webkit-touch-callout: default;
 }
 
@@ -222,8 +221,7 @@ button {
   font-weight: 500;
 }
 
-.field input,
-.field textarea {
+.field input {
   width: 100%;
   font-family: var(--font-body);
   font-size: 16px;
@@ -234,13 +232,7 @@ button {
   color: var(--ink);
 }
 
-.field input:focus,
-.field textarea:focus {
+.field input:focus {
   outline: 2px solid var(--water);
   outline-offset: 1px;
-}
-
-.field textarea {
-  resize: none;
-  min-height: 54px;
 }
