@@ -37,7 +37,7 @@ function handleSubmit() {
     <form @submit.prevent="handleSubmit">
       <div class="field">
         <label for="fCatName">貓咪名字</label>
-        <input id="fCatName" ref="inputRef" v-model="name" type="text" placeholder="例如：小橘" required />
+        <input id="fCatName" ref="inputRef" v-model="name" type="text" required />
       </div>
       <div class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>

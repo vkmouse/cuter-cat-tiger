@@ -46,7 +46,7 @@ function handleSubmit() {
     <form @submit.prevent="handleSubmit">
       <div class="field">
         <label for="fEditCatName">貓咪名字</label>
-        <input id="fEditCatName" ref="inputRef" v-model="name" type="text" placeholder="例如：小橘" required />
+        <input id="fEditCatName" ref="inputRef" v-model="name" type="text" required />
       </div>
       <div class="field-row">
         <div class="field">

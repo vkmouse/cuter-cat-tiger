@@ -118,12 +118,7 @@ const title = computed(() => {
   return `${label} · ${props.catName}`
 })
 
-const amountLabel = computed(() => {
-  if (action.value === 'feeding') {
-    return props.type === 'water' ? '這次給多少 (ml)' : '這次給多少 (g)'
-  }
-  return props.type === 'water' ? '數量 (ml)' : '數量 (g)'
-})
+const amountLabel = computed(() => (props.type === 'water' ? '單位 ml' : '單位 g'))
 const amountUnit = computed(() => (props.type === 'water' ? 'ml' : 'g'))
 
 function handleSubmit() {
