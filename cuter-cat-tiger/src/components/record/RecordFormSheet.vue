@@ -180,6 +180,7 @@ function handleSubmit() {
               :unit="amountUnit"
               :saving="saving"
               :require-positive="mode === 'add' || action === 'feeding'"
+              @collapse="calcExpanded = false"
             />
           </ExpandableField>
         </div>

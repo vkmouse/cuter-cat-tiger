@@ -112,6 +112,7 @@ function handleConfirm() {
             :type="session.type"
             :unit="amountUnit"
             :saving="saving"
+            @collapse="calcExpanded = false"
           />
         </ExpandableField>
         <p v-if="consumedPreview !== null" class="consumed-preview" :class="{ negative: consumedPreview < 0 }">
