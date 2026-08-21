@@ -23,9 +23,8 @@ const meta = {
     },
     saving: {
       control: 'boolean',
-      description: '儲存中時所有按鍵（含確定鍵）都會 disabled，確定鍵文字改為「儲存中…」。',
+      description: '儲存中時所有按鍵（含確定鍵）都會 disabled，「=」會維持停用，避免在沒有完整算式時誤按。',
     },
-    confirm: { action: 'confirm' },
   },
   // 元件本身是 v-model + pending operator 的內部狀態機（見元件內註解），
   // 用預設的 args 綁定沒辦法反映按鍵後的畫面變化，所以這裡用一個本地 ref 包一層，
@@ -43,7 +42,6 @@ const meta = {
           :type="args.type"
           :unit="args.unit"
           :saving="args.saving"
-          @confirm="args.confirm"
         />
       </div>
     `,
@@ -64,7 +62,7 @@ export const WaterEmpty: Story = {
     docs: {
       description: {
         story:
-          '初始空白狀態，可以直接點按鍵盤操作：輸入數字、按運算符號進入 pending 狀態、按「確定」先算出結果，再按一次「確定」才會真的 emit confirm。想看錯誤訊息可以試試「10 − 20 確定」（結果為負數會被擋下來）。',
+          '初始空白狀態；輸入完整算式後「=」才會啟用，只負責算出結果，不負責儲存紀錄。儲存由外層表單最下面的「儲存」按鈕處理。想看錯誤訊息可以試試「10 − 20 =」（結果為負數會被擋下來）。',
       },
     },
   },

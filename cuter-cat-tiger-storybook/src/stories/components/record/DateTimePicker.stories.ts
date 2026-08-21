@@ -48,6 +48,19 @@ export const Default: Story = {
   },
 }
 
+export const FourWeekMonth: Story = {
+  args: {
+    modelValue: '2026-02-15T08:00',
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: '2 月 2026 剛好只需要 4 週，日曆不再固定補滿 6 週，減少手機上的垂直佔用。',
+      },
+    },
+  },
+}
+
 export const EarlyMonth: Story = {
   args: {
     modelValue: '2026-03-01T08:00',

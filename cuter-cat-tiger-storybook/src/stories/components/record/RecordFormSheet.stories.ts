@@ -51,7 +51,7 @@ const meta = {
     action: {
       control: 'radio',
       options: ['record', 'feeding'],
-      description: 'water/food 開啟時的預設操作。',
+      description: 'water/food 開啟時的預設操作；一般記錄預設直接展開計算機。',
     },
     saving: {
       control: 'boolean',

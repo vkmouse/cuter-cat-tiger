@@ -37,6 +37,8 @@ const panelStateClass = computed(() => ({
   <div class="sheet-panel" :class="[panelStateClass, props.panelClass]" role="dialog" aria-modal="true" :aria-labelledby="titleId">
     <div class="sheet-handle" aria-hidden="true" />
     <h2 :id="titleId">{{ title }}</h2>
-    <slot />
+    <div class="sheet-content">
+      <slot />
+    </div>
   </div>
 </template>

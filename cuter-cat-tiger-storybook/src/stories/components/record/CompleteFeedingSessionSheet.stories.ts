@@ -48,7 +48,7 @@ const meta = {
     },
     saving: {
       control: 'boolean',
-      description: '儲存中時會傳給 CalculatorPad，停用確認鍵。',
+      description: '儲存中時會傳給 CalculatorPad；整筆紀錄的儲存由 Sheet 底部的「儲存」按鈕負責。',
     },
     cancel: { action: 'cancel' },
     save: { action: 'save' },

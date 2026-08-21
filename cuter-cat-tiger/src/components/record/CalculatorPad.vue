@@ -4,8 +4,8 @@ import { computed, ref, watch } from 'vue'
 /**
  * 仿照 JaNote CalculatorPad 的互動邏輯（pending operator 狀態機）：
  * - 按運算符號（+ − × ÷）進入 pending 狀態，畫面顯示第一個運算元 + 運算符提示
- * - 再輸入第二個數字後，按「確定」鍵（此時顯示 =）先算出結果、按鈕變回「確定」
- * - 結果沒問題的話，再按一次「確定」才會真的送出（emit confirm），不會算完自動送出
+ * - 再輸入第二個數字後，按「=」只計算並套用結果
+ * - 儲存整筆紀錄由外層表單最下方的「儲存」按鈕負責，計算機不再承擔送出表單的責任
  * - 跟 JaNote 不同的地方：這裡多加了「結果為負數要擋下來」的規則（cat app 的數量不能是負的）
  */
 
@@ -24,7 +24,6 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
-  (e: 'confirm'): void
 }>()
 
 const amount = computed({
@@ -49,16 +48,11 @@ watch(
   },
 )
 
-const confirmLabel = computed(() => {
-  if (props.saving) return '儲存中…'
-  return pendingOperator.value ? '=' : '確定'
-})
+const confirmLabel = computed(() => '=')
 const confirmEnabled = computed(() => {
   if (props.saving) return false
-  if (pendingOperator.value) return true
-  if (!amount.value) return false
-  if (props.requirePositive) return parseFloat(amount.value) > 0
-  return true
+  // 「=」只負責完成一個真正的算式；沒有 pending 運算元，或只有第一個數字時都不能按。
+  return !!pendingOperator.value && hasSecondInput.value
 })
 
 function clearPending() {
@@ -103,26 +97,7 @@ function applyCalculation(): boolean {
 }
 
 function handleConfirmClick() {
-  if (props.saving) return
-  if (!pendingOperator.value) {
-    // 非 pending 狀態：這才是真正送出整筆紀錄的時機。
-    if (!amount.value) {
-      errorMsg.value = '請輸入數量'
-      return
-    }
-    if (props.requirePositive && parseFloat(amount.value) <= 0) {
-      errorMsg.value = '數量必須大於 0'
-      return
-    }
-    emit('confirm')
-    return
-  }
-  if (!hasSecondInput.value) {
-    // 按了運算符號但還沒打第二個數字：取消 pending，數字維持原樣。
-    clearPending()
-    return
-  }
-  // 算完之後不自動送出，需要使用者看過結果、再按一次「確定」才會真的存檔。
+  if (props.saving || !confirmEnabled.value) return
   applyCalculation()
 }
 

@@ -59,13 +59,13 @@ watch(
       timeValue.value = isoToDateTimeLocalValue(props.record.occurredAt)
       note.value = props.record.note ?? ''
       quickNotes.value = getQuickNotes(props.type)
-      calcExpanded.value = false
+      calcExpanded.value = !isLitter(props.type)
     } else {
       amount.value = ''
       timeValue.value = nowDateTimeLocalValue()
       note.value = ''
       quickNotes.value = getQuickNotes(props.type)
-      calcExpanded.value = action.value === 'feeding'
+      calcExpanded.value = isFeedingType.value
     }
 
     formInstanceKey.value += 1
@@ -81,7 +81,7 @@ function selectAction(next: 'record' | 'feeding') {
   if (toggleDisabled.value || !isFeedingType.value) return
   action.value = next
   amount.value = ''
-  calcExpanded.value = next === 'feeding'
+  calcExpanded.value = true
   if (next === 'record') {
     timeValue.value = nowDateTimeLocalValue()
     note.value = ''
@@ -178,7 +178,7 @@ function handleSubmit() {
         </div>
         <div class="field">
           <label for="fNote">備註</label>
-          <textarea id="fNote" v-model="note" placeholder="例如：湯罐加水" />
+          <textarea id="fNote" v-model="note" />
           <div
             v-if="quickNotes.length"
             class="pill-group quick-notes"
@@ -204,7 +204,7 @@ function handleSubmit() {
             <template #summary>
               <span class="amount-summary-label">{{ amountLabel }}</span>
               <span class="amount-summary-value">
-                {{ amount || '尚未輸入' }}<span v-if="amount"> {{ amountUnit }}</span>
+                {{ amount }}<span v-if="amount"> {{ amountUnit }}</span>
               </span>
             </template>
             <CalculatorPad
@@ -214,12 +214,20 @@ function handleSubmit() {
               :unit="amountUnit"
               :saving="saving"
               :require-positive="mode === 'add' || action === 'feeding'"
-              @confirm="handleSubmit"
             />
           </ExpandableField>
         </div>
-        <div class="sheet-actions minimal">
+        <div class="sheet-actions">
           <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
+          <button
+            type="button"
+            class="btn primary"
+            :class="{ food: type === 'food' }"
+            :disabled="saving"
+            @click="handleSubmit"
+          >
+            {{ saving ? '儲存中…' : '儲存' }}
+          </button>
         </div>
       </template>
 
@@ -270,14 +278,6 @@ function handleSubmit() {
   margin-top: 8px;
 }
 
-.sheet-actions.minimal {
-  justify-content: center;
-}
-
-.sheet-actions.minimal .btn {
-  flex: none;
-  min-width: 120px;
-}
 
 .amount-summary-label {
   font-size: 0.78rem;

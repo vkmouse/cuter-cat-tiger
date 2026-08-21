@@ -59,6 +59,28 @@ export const Elevated: Story = {
   },
 }
 
+export const MobileLongContent: Story = {
+  args: {
+    open: true,
+    title: '手機長內容',
+  },
+  render: (args) => ({
+    components: { BaseSheet },
+    setup() {
+      return { args }
+    },
+    template: `
+      <BaseSheet v-bind="args">
+        <div style="display:grid;gap:14px;">
+          <p v-for="i in 10" :key="i" style="margin:0;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--paper);">
+            長內容第 {{ i }} 段：在手機上，Sheet 內容會維持標題可見，只有內容區需要垂直滑動。
+          </p>
+        </div>
+      </BaseSheet>
+    `,
+  }),
+}
+
 export const Closed: Story = {
   args: {
     open: false,

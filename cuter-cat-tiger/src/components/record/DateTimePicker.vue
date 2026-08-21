@@ -93,9 +93,11 @@ const calendarDays = computed<CalendarDay[]>(() => {
     days.push({ day, dateKey: buildDateKey(y, m, day), isCurrentMonth: true })
   }
 
+  // 只補齊當月實際需要的週數，不固定塞滿 6 週，避免手機上無謂增加高度。
   const nextMonth = m === 11 ? 0 : m + 1
   const nextYear = m === 11 ? y + 1 : y
-  const remaining = 42 - days.length
+  const weekCount = Math.ceil(days.length / 7)
+  const remaining = weekCount * 7 - days.length
   for (let day = 1; day <= remaining; day++) {
     days.push({ day, dateKey: buildDateKey(nextYear, nextMonth, day), isCurrentMonth: false })
   }

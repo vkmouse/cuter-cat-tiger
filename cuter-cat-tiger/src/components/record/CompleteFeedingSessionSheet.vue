@@ -53,6 +53,11 @@ const amountUnit = computed(() => props.session?.unit ?? '')
 const givenAmount = computed(() => props.session?.givenAmount ?? 0)
 
 // 純預覽用，實際存進資料庫的 consumed 一律由伺服器用 given_amount 重新計算，不信任這裡算出的值。
+const canSave = computed(() => {
+  const r = parseFloat(remaining.value)
+  return Number.isFinite(r) && r >= 0 && !!timeValue.value
+})
+
 const consumedPreview = computed(() => {
   const r = parseFloat(remaining.value)
   if (Number.isNaN(r)) return null
@@ -78,7 +83,7 @@ function handleConfirm() {
 
       <div class="field">
         <label for="fRemainingNote">備註</label>
-        <textarea id="fRemainingNote" v-model="note" placeholder="例如：中途加過水" />
+        <textarea id="fRemainingNote" v-model="note" />
         <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: session.type === 'food' }">
           <button
             v-for="text in quickNotes"
@@ -98,7 +103,7 @@ function handleConfirm() {
           <template #summary>
             <span class="amount-summary-label">剩下多少 ({{ amountUnit }})</span>
             <span class="amount-summary-value">
-              {{ remaining || '尚未輸入' }}<span v-if="remaining"> {{ amountUnit }}</span>
+              {{ remaining }}<span v-if="remaining"> {{ amountUnit }}</span>
             </span>
           </template>
           <CalculatorPad
@@ -107,7 +112,6 @@ function handleConfirm() {
             :type="session.type"
             :unit="amountUnit"
             :saving="saving"
-            @confirm="handleConfirm"
           />
         </ExpandableField>
         <p v-if="consumedPreview !== null" class="consumed-preview" :class="{ negative: consumedPreview < 0 }">
@@ -115,8 +119,17 @@ function handleConfirm() {
         </p>
       </div>
 
-      <div class="sheet-actions minimal">
+      <div class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
+        <button
+          type="button"
+          class="btn primary"
+          :class="{ food: session.type === 'food' }"
+          :disabled="saving || !canSave"
+          @click="handleConfirm"
+        >
+          {{ saving ? '儲存中…' : '儲存' }}
+        </button>
       </div>
     </template>
   </BaseSheet>
@@ -144,14 +157,6 @@ function handleConfirm() {
   color: #b3452f;
 }
 
-.sheet-actions.minimal {
-  justify-content: center;
-}
-
-.sheet-actions.minimal .btn {
-  flex: none;
-  min-width: 120px;
-}
 
 .amount-summary-label {
   font-size: 0.78rem;
