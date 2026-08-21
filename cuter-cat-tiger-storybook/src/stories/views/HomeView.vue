@@ -2,29 +2,38 @@
 // Storybook 專用檔案，不屬於正式 app 程式碼，只是刻意跟原始碼同名放在對應的
 // views/ 資料夾下，方便對照：這裡示範的是 cuter-cat-tiger/src/views/HomeView.vue。
 // 目的：把 components/ 底下所有元件組裝成跟正式版一樣的畫面，
-// 但用記憶體內的假資料 + setTimeout 模擬延遲取代真實 API（useCats/useRecords/...），
-// 讓 Storybook 裡可以真的點擊新增/編輯/刪除紀錄、切換貓咪、切換日期、看多貓總覽。
+// 但用記憶體內的假資料 + setTimeout 模擬延遲取代真實 API（useCats/useRecords/useFeedingSessions/...），
+// 讓 Storybook 裡可以真的點擊新增/編輯/刪除紀錄、切換貓咪、編輯貓咪、
+// 開始／編輯／完成／取消「先給後測」餵食 session、切換日期、看多貓總覽。
 import { computed, reactive, ref, watch } from 'vue'
 import CatTabs from '../../../../cuter-cat-tiger/src/components/cat/CatTabs.vue'
 import AddCatSheet from '../../../../cuter-cat-tiger/src/components/cat/AddCatSheet.vue'
+import EditCatSheet from '../../../../cuter-cat-tiger/src/components/cat/EditCatSheet.vue'
 import DateNav from '../../../../cuter-cat-tiger/src/components/nav/DateNav.vue'
 import DailyStats from '../../../../cuter-cat-tiger/src/components/stats/DailyStats.vue'
 import AllCatsStatsSheet from '../../../../cuter-cat-tiger/src/components/stats/AllCatsStatsSheet.vue'
 import RecordList from '../../../../cuter-cat-tiger/src/components/record/RecordList.vue'
 import RecordFormSheet from '../../../../cuter-cat-tiger/src/components/record/RecordFormSheet.vue'
+import PendingFeedingList from '../../../../cuter-cat-tiger/src/components/record/PendingFeedingList.vue'
+import FeedingSessionFormSheet from '../../../../cuter-cat-tiger/src/components/record/FeedingSessionFormSheet.vue'
+import CompleteFeedingSessionSheet from '../../../../cuter-cat-tiger/src/components/record/CompleteFeedingSessionSheet.vue'
 import ConfirmSheet from '../../../../cuter-cat-tiger/src/components/ui/ConfirmSheet.vue'
 import { addDaysToDateKey, dateKeyFromIso, dateTimeLocalValueToIso, todayDateKey } from '../../../../cuter-cat-tiger/src/utils/date'
-import type { Cat, CatRecord, DailyStat, RecordType } from '../../../../cuter-cat-tiger/src/types'
+import type { Cat, CatRecord, DailyStat, FeedingSession, RecordType } from '../../../../cuter-cat-tiger/src/types'
 
 function hoursAgoIso(hours: number): string {
   return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
 }
 
+function minutesAgoIso(minutes: number): string {
+  return new Date(Date.now() - minutes * 60 * 1000).toISOString()
+}
+
 function seedCats(): Cat[] {
   return [
-    { id: 1, name: '橘子', createdAt: hoursAgoIso(24 * 30) },
-    { id: 2, name: '小黑', createdAt: hoursAgoIso(24 * 20) },
-    { id: 3, name: '奶油', createdAt: hoursAgoIso(24 * 10) },
+    { id: 1, name: '橘子', targetWater: 200, targetFood: 60, createdAt: hoursAgoIso(24 * 30) },
+    { id: 2, name: '小黑', targetWater: 180, targetFood: 50, createdAt: hoursAgoIso(24 * 20) },
+    { id: 3, name: '奶油', targetWater: 220, targetFood: 70, createdAt: hoursAgoIso(24 * 10) },
   ]
 }
 
@@ -47,10 +56,17 @@ function seedRecords(): CatRecord[] {
   ]
 }
 
+// 橘子先給了水但還沒量剩下多少，示範 PendingFeedingList／完成量測／取消 的操作。
+function seedFeedingSessions(): FeedingSession[] {
+  return [{ id: 1, catId: 1, type: 'water', givenAmount: 50, unit: 'ml', givenAt: minutesAgoIso(20), updatedAt: null }]
+}
+
 const cats = reactive<Cat[]>(seedCats())
 const records = reactive<CatRecord[]>(seedRecords())
+const feedingSessions = reactive<FeedingSession[]>(seedFeedingSessions())
 let nextCatId = 4
 let nextRecordId = 100
+let nextSessionId = 100
 
 const activeCatId = ref<number | null>(cats[0]?.id ?? null)
 const activeCatName = computed(() => cats.find((c) => c.id === activeCatId.value)?.name ?? '')
@@ -86,6 +102,9 @@ const filteredRecords = computed(() =>
   records.filter((r) => r.catId === activeCatId.value && dateKeyFromIso(r.occurredAt) === selectedDate.value),
 )
 
+// 只顯示目前這隻貓正在進行中的餵食 session（跟 useFeedingSessions 依 catId 查詢的行為一致）。
+const activeFeedingSessions = computed(() => feedingSessions.filter((s) => s.catId === activeCatId.value))
+
 function statsForDate(date: string): DailyStat[] {
   return cats.map((cat) => {
     const dayRecords = records.filter((r) => r.catId === cat.id && dateKeyFromIso(r.occurredAt) === date)
@@ -104,6 +123,8 @@ function statsForDate(date: string): DailyStat[] {
       poopCount: dayRecords.filter((r) => r.type === 'poop').length,
       lastPeeAt: lastOf('pee'),
       lastPoopAt: lastOf('poop'),
+      targetWater: cat.targetWater,
+      targetFood: cat.targetFood,
     }
   })
 }
@@ -190,6 +211,119 @@ function handleRecordSave(payload: { amount?: number; timeValue: string; note: s
   }, 400)
 }
 
+// ---------- 「先給後測」餵食 session：開始／編輯給的量 ----------
+const feedingSheetOpen = ref(false)
+const feedingSheetMode = ref<'start' | 'edit'>('start')
+const feedingSheetType = ref<'water' | 'food'>('water')
+const editingFeedingSession = ref<FeedingSession | null>(null)
+const feedingSessionSaving = ref(false)
+
+function openStartFeedingSession(type: 'water' | 'food') {
+  feedingSheetMode.value = 'start'
+  feedingSheetType.value = type
+  editingFeedingSession.value = null
+  feedingSheetOpen.value = true
+}
+function openEditFeedingSession(session: FeedingSession) {
+  feedingSheetMode.value = 'edit'
+  feedingSheetType.value = session.type
+  editingFeedingSession.value = session
+  feedingSheetOpen.value = true
+}
+function closeFeedingSheet() {
+  feedingSheetOpen.value = false
+}
+
+function handleFeedingSheetSave(amount: number) {
+  feedingSessionSaving.value = true
+  setTimeout(() => {
+    if (feedingSheetMode.value === 'start') {
+      if (activeCatId.value != null) {
+        feedingSessions.push({
+          id: nextSessionId++,
+          catId: activeCatId.value,
+          type: feedingSheetType.value,
+          givenAmount: amount,
+          unit: feedingSheetType.value === 'water' ? 'ml' : 'g',
+          givenAt: new Date().toISOString(),
+          updatedAt: null,
+        })
+      }
+    } else if (editingFeedingSession.value) {
+      const target = feedingSessions.find((s) => s.id === editingFeedingSession.value!.id)
+      if (target) {
+        target.givenAmount = amount
+        target.updatedAt = new Date().toISOString()
+      }
+    }
+    feedingSessionSaving.value = false
+    closeFeedingSheet()
+  }, 400)
+}
+
+// ---------- 完成量測：把 session 轉成一筆真正的紀錄 ----------
+const completeSheetOpen = ref(false)
+const completingSession = ref<FeedingSession | null>(null)
+const feedingSessionCompleting = ref(false)
+
+function openCompleteFeedingSession(session: FeedingSession) {
+  completingSession.value = session
+  completeSheetOpen.value = true
+}
+function closeCompleteSheet() {
+  completeSheetOpen.value = false
+  completingSession.value = null
+}
+
+function handleCompleteSave(payload: { remainingAmount: number; timeValue: string; note: string }) {
+  if (!completingSession.value) return
+  const session = completingSession.value
+  feedingSessionCompleting.value = true
+  setTimeout(() => {
+    // consumed 一律由「給的量」與「剩下多少」重新算，模擬伺服器端的行為（不信任前端算好的值）。
+    const consumed = Math.max(0, Math.round((session.givenAmount - payload.remainingAmount) * 10) / 10)
+    records.push({
+      id: nextRecordId++,
+      catId: session.catId,
+      type: session.type,
+      amount: consumed,
+      unit: session.unit,
+      note: payload.note || null,
+      occurredAt: dateTimeLocalValueToIso(payload.timeValue),
+      updatedAt: null,
+    })
+    const idx = feedingSessions.findIndex((s) => s.id === session.id)
+    if (idx !== -1) feedingSessions.splice(idx, 1)
+    feedingSessionCompleting.value = false
+    closeCompleteSheet()
+  }, 400)
+}
+
+// ---------- 取消進行中的餵食 session ----------
+const cancelSessionConfirmOpen = ref(false)
+const pendingCancelSession = ref<FeedingSession | null>(null)
+const feedingSessionCancelling = ref(false)
+
+function openCancelSessionConfirm(session: FeedingSession) {
+  pendingCancelSession.value = session
+  cancelSessionConfirmOpen.value = true
+}
+function closeCancelSessionConfirm() {
+  cancelSessionConfirmOpen.value = false
+  pendingCancelSession.value = null
+}
+function handleConfirmCancelSession() {
+  if (!pendingCancelSession.value) return
+  const id = pendingCancelSession.value.id
+  feedingSessionCancelling.value = true
+  setTimeout(() => {
+    const idx = feedingSessions.findIndex((s) => s.id === id)
+    if (idx !== -1) feedingSessions.splice(idx, 1)
+    feedingSessionCancelling.value = false
+    closeCancelSessionConfirm()
+  }, 400)
+}
+
 // ---------- 新增貓咪抽屜 ----------
 const addCatOpen = ref(false)
 const addingCat = ref(false)
@@ -203,11 +337,42 @@ function closeAddCat() {
 function handleAddCatSave(name: string) {
   addingCat.value = true
   setTimeout(() => {
-    const cat: Cat = { id: nextCatId++, name, createdAt: new Date().toISOString() }
+    const cat: Cat = { id: nextCatId++, name, targetWater: 200, targetFood: 60, createdAt: new Date().toISOString() }
     cats.push(cat)
     activeCatId.value = cat.id
     addingCat.value = false
     closeAddCat()
+  }, 400)
+}
+
+// ---------- 編輯貓咪抽屜：點目前已選中的 tab 會浮出編輯鈕（見 CatTabs） ----------
+const editCatOpen = ref(false)
+const editingCat = ref<Cat | null>(null)
+const editingCatSaving = ref(false)
+
+function openEditCat(catId: number) {
+  const cat = cats.find((c) => c.id === catId)
+  if (!cat) return
+  editingCat.value = cat
+  editCatOpen.value = true
+}
+function closeEditCat() {
+  editCatOpen.value = false
+  editingCat.value = null
+}
+function handleEditCatSave(payload: { name: string; targetWater: number; targetFood: number }) {
+  if (!editingCat.value) return
+  const id = editingCat.value.id
+  editingCatSaving.value = true
+  setTimeout(() => {
+    const target = cats.find((c) => c.id === id)
+    if (target) {
+      target.name = payload.name
+      target.targetWater = payload.targetWater
+      target.targetFood = payload.targetFood
+    }
+    editingCatSaving.value = false
+    closeEditCat()
   }, 400)
 }
 
@@ -239,12 +404,18 @@ function handleConfirmDelete() {
 function resetDemo() {
   cats.splice(0, cats.length, ...seedCats())
   records.splice(0, records.length, ...seedRecords())
+  feedingSessions.splice(0, feedingSessions.length, ...seedFeedingSessions())
   nextCatId = 4
   nextRecordId = 100
+  nextSessionId = 100
   activeCatId.value = cats[0]?.id ?? null
   selectedDate.value = todayDateKey()
   recordSheetOpen.value = false
+  feedingSheetOpen.value = false
+  completeSheetOpen.value = false
+  cancelSessionConfirmOpen.value = false
   addCatOpen.value = false
+  editCatOpen.value = false
   deleteConfirmOpen.value = false
   allCatsStatsOpen.value = false
 }
@@ -253,11 +424,17 @@ function resetDemo() {
 <template>
   <div class="playground">
     <div class="playground-banner">
-      <span>這是 Storybook 專用的可互動示範，資料只存在瀏覽器記憶體裡，重新整理就會回到初始狀態。</span>
+      <span>這是 Storybook 專用的可互動示範，資料只存在瀏覽器記憶體裡，重新整理就會回到初始狀態。點目前選中的貓咪分頁可以浮出「編輯貓咪」按鈕。</span>
       <button type="button" class="reset-btn" @click="resetDemo">重置示範資料</button>
     </div>
 
-    <CatTabs :cats="cats" :active-cat-id="activeCatId" @select="(id) => (activeCatId = id)" @add-cat="openAddCat" />
+    <CatTabs
+      :cats="cats"
+      :active-cat-id="activeCatId"
+      @select="(id) => (activeCatId = id)"
+      @add-cat="openAddCat"
+      @edit-cat="openEditCat"
+    />
 
     <div class="card">
       <DateNav :date="selectedDate" @prev-day="goPrevDay" @next-day="goNextDay" @open-all-cats-stats="openAllCatsStats" />
@@ -281,46 +458,101 @@ function resetDemo() {
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c-4.4 0-7-1.4-7-3.4 0-1.3 1-2.1 2.3-2.5-.6-.6-1-1.4-1-2.3 0-1.7 1.5-2.9 3.2-2.8-.2-.5-.3-1-.3-1.6 0-1.9 1.6-3.4 3.5-3.4 1.7 0 3.1 1.2 3.4 2.8 1.6 0 2.9 1.2 2.9 2.7 0 .8-.3 1.5-.9 2 1.3.4 2.3 1.3 2.3 2.6 0 2-2.6 3.4-7 3.4-.5.3-1 .5-1.4.5s-.9-.2-1-.5z" /></svg>
           記錄大便
         </button>
+        <!-- 「先給後測」：現在只知道給了多少，等一段時間量出剩多少後才會變成一筆真正的紀錄。 -->
+        <button class="stamp-btn water ghost-outline" :disabled="!activeCatId" @click="openStartFeedingSession('water')">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
+          開始餵水
+        </button>
+        <button class="stamp-btn food ghost-outline" :disabled="!activeCatId" @click="openStartFeedingSession('food')">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
+          開始餵飼料
+        </button>
       </div>
+
+      <PendingFeedingList
+        :sessions="activeFeedingSessions"
+        @complete="openCompleteFeedingSession"
+        @edit="openEditFeedingSession"
+        @cancel="openCancelSessionConfirm"
+      />
 
       <RecordList :records="filteredRecords" :loading="recordsLoading" error="" @edit="openEditRecord" @remove="openDeleteConfirm" />
     </div>
-
-    <RecordFormSheet
-      :open="recordSheetOpen"
-      :mode="recordSheetMode"
-      :type="recordSheetType"
-      :cat-name="activeCatName"
-      :record="editingRecord"
-      :saving="saving"
-      @cancel="closeRecordSheet"
-      @save="handleRecordSave"
-    />
-
-    <AddCatSheet :open="addCatOpen" :saving="addingCat" @cancel="closeAddCat" @save="handleAddCatSave" />
-
-    <AllCatsStatsSheet
-      :open="allCatsStatsOpen"
-      :date="selectedDate"
-      :stats="allCatsStats"
-      :active-cat-id="activeCatId"
-      :loading="allCatsStatsLoading"
-      error=""
-      @cancel="closeAllCatsStats"
-      @select-cat="handleAllCatsStatsSelectCat"
-    />
-
-    <ConfirmSheet
-      :open="deleteConfirmOpen"
-      title="刪除這筆紀錄？"
-      message="刪除後無法復原。"
-      confirm-text="刪除"
-      danger
-      :saving="deleting"
-      @cancel="closeDeleteConfirm"
-      @confirm="handleConfirmDelete"
-    />
   </div>
+
+  <RecordFormSheet
+    :open="recordSheetOpen"
+    :mode="recordSheetMode"
+    :type="recordSheetType"
+    :cat-name="activeCatName"
+    :record="editingRecord"
+    :saving="saving"
+    @cancel="closeRecordSheet"
+    @save="handleRecordSave"
+  />
+
+  <FeedingSessionFormSheet
+    :open="feedingSheetOpen"
+    :mode="feedingSheetMode"
+    :type="feedingSheetType"
+    :cat-name="activeCatName"
+    :session="editingFeedingSession"
+    :saving="feedingSessionSaving"
+    @cancel="closeFeedingSheet"
+    @save="handleFeedingSheetSave"
+  />
+
+  <CompleteFeedingSessionSheet
+    :open="completeSheetOpen"
+    :cat-name="activeCatName"
+    :session="completingSession"
+    :saving="feedingSessionCompleting"
+    @cancel="closeCompleteSheet"
+    @save="handleCompleteSave"
+  />
+
+  <ConfirmSheet
+    :open="cancelSessionConfirmOpen"
+    title="取消這次餵食？"
+    message="取消後這筆「先給後測」的紀錄會直接消失，不會產生任何紀錄。"
+    confirm-text="確定取消"
+    danger
+    :saving="feedingSessionCancelling"
+    @cancel="closeCancelSessionConfirm"
+    @confirm="handleConfirmCancelSession"
+  />
+
+  <AddCatSheet :open="addCatOpen" :saving="addingCat" @cancel="closeAddCat" @save="handleAddCatSave" />
+
+  <EditCatSheet
+    :open="editCatOpen"
+    :cat="editingCat"
+    :saving="editingCatSaving"
+    @cancel="closeEditCat"
+    @save="handleEditCatSave"
+  />
+
+  <AllCatsStatsSheet
+    :open="allCatsStatsOpen"
+    :date="selectedDate"
+    :stats="allCatsStats"
+    :active-cat-id="activeCatId"
+    :loading="allCatsStatsLoading"
+    error=""
+    @cancel="closeAllCatsStats"
+    @select-cat="handleAllCatsStatsSelectCat"
+  />
+
+  <ConfirmSheet
+    :open="deleteConfirmOpen"
+    title="刪除這筆紀錄？"
+    message="刪除後無法復原。"
+    confirm-text="刪除"
+    danger
+    :saving="deleting"
+    @cancel="closeDeleteConfirm"
+    @confirm="handleConfirmDelete"
+  />
 </template>
 
 <style scoped>
@@ -418,5 +650,10 @@ function resetDemo() {
 .stamp-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 「開始餵水/飼料」是先給後測、還沒完成的動作，用虛線邊框跟「記錄喝水/飼料」的實線做出區隔。 */
+.stamp-btn.ghost-outline {
+  border-style: dashed;
 }
 </style>

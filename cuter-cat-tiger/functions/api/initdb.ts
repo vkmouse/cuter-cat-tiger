@@ -25,6 +25,18 @@ const INIT_STATEMENTS = [
    )`,
   `CREATE INDEX IF NOT EXISTS idx_records_cat_id ON records(cat_id)`,
   `CREATE INDEX IF NOT EXISTS idx_records_occurred_at ON records(occurred_at)`,
+  // 先給後測的餵食情境：只有 water/food 會用到，量測完成後會轉成一筆 records 並刪掉這裡的暫存列。
+  `CREATE TABLE IF NOT EXISTS feeding_sessions (
+     id            INTEGER PRIMARY KEY AUTOINCREMENT,
+     cat_id        INTEGER NOT NULL REFERENCES cats(id) ON DELETE CASCADE,
+     type          TEXT NOT NULL,
+     given_amount  REAL NOT NULL,
+     unit          TEXT NOT NULL,
+     given_at      TEXT NOT NULL DEFAULT (datetime('now')),
+     created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+     updated_at    TEXT
+   )`,
+  `CREATE INDEX IF NOT EXISTS idx_feeding_sessions_cat_id ON feeding_sessions(cat_id)`,
 ]
 
 export const onRequestPost: PagesFunction<Env> = withErrorHandling(async (context) => {
@@ -33,6 +45,6 @@ export const onRequestPost: PagesFunction<Env> = withErrorHandling(async (contex
     await db.prepare(sql).run()
   }
   return Response.json({
-    message: '資料庫初始化完成（cats / records 資料表已建立，若已存在則略過）',
+    message: '資料庫初始化完成（cats / records / feeding_sessions 資料表已建立，若已存在則略過）',
   })
 })

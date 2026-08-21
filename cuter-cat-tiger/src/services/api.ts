@@ -2,10 +2,14 @@
 import type {
   Cat,
   CatRecord,
+  CompleteFeedingSessionPayload,
   CreateCatPayload,
+  CreateFeedingSessionPayload,
   CreateRecordPayload,
   DailyStat,
+  FeedingSession,
   UpdateCatPayload,
+  UpdateFeedingSessionPayload,
   UpdateRecordPayload,
 } from '../types'
 
@@ -89,4 +93,49 @@ export async function fetchDailyStats(date: string): Promise<DailyStat[]> {
   const params = new URLSearchParams({ date })
   const res = await fetch(`/api/stats/daily?${params.toString()}`)
   return parseJsonOrThrow<DailyStat[]>(res, '無法取得當日統計')
+}
+
+
+export async function fetchFeedingSessions(catId: number): Promise<FeedingSession[]> {
+  const params = new URLSearchParams({ catId: String(catId) })
+  const res = await fetch(`/api/feeding-sessions?${params.toString()}`)
+  return parseJsonOrThrow<FeedingSession[]>(res, '無法取得進行中的餵食')
+}
+
+export async function createFeedingSession(payload: CreateFeedingSessionPayload): Promise<FeedingSession> {
+  const res = await fetch('/api/feeding-sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return parseJsonOrThrow<FeedingSession>(res, '開始餵食失敗')
+}
+
+export async function updateFeedingSession(
+  id: number,
+  payload: UpdateFeedingSessionPayload,
+): Promise<FeedingSession> {
+  const res = await fetch(`/api/feeding-sessions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return parseJsonOrThrow<FeedingSession>(res, '修改給的量失敗')
+}
+
+export async function cancelFeedingSession(id: number): Promise<void> {
+  const res = await fetch(`/api/feeding-sessions/${id}`, { method: 'DELETE' })
+  return parseJsonOrThrow<void>(res, '取消餵食失敗')
+}
+
+export async function completeFeedingSession(
+  id: number,
+  payload: CompleteFeedingSessionPayload,
+): Promise<CatRecord> {
+  const res = await fetch(`/api/feeding-sessions/${id}/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return parseJsonOrThrow<CatRecord>(res, '完成量測失敗')
 }

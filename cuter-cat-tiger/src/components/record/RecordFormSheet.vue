@@ -4,6 +4,9 @@ import type { CatRecord, RecordType } from '../../types'
 import { nowDateTimeLocalValue, isoToDateTimeLocalValue } from '../../utils/date'
 import { getQuickNotes } from '../../composables/useQuickNotes'
 import BaseSheet from '../ui/BaseSheet.vue'
+import ExpandableField from '../ui/ExpandableField.vue'
+import CalculatorPad from './CalculatorPad.vue'
+import DateTimePicker from './DateTimePicker.vue'
 
 const props = defineProps<{
   open: boolean
@@ -24,6 +27,10 @@ const timeValue = ref('')
 const note = ref('')
 // 每次開啟時重新讀取，確保剛達到門檻的備註能立即出現。
 const quickNotes = ref<string[]>([])
+// 計算機一律預設收合，點一下才展開；DateTimePicker 的展開狀態是它自己內部管理的，
+// 這裡改用 formInstanceKey 讓它每次開啟時整個重新掛載，藉此把內部的展開狀態一併重置。
+const calcExpanded = ref(false)
+const formInstanceKey = ref(0)
 
 const isLitter = (t: RecordType) => t === 'pee' || t === 'poop'
 
@@ -41,6 +48,8 @@ watch(
       note.value = ''
     }
     quickNotes.value = getQuickNotes(props.type)
+    calcExpanded.value = false
+    formInstanceKey.value += 1
   },
   { immediate: true },
 )
@@ -68,6 +77,7 @@ const title = computed(() => {
 })
 
 const amountLabel = computed(() => (props.type === 'water' ? '數量 (ml)' : '數量 (g)'))
+const amountUnit = computed(() => (props.type === 'water' ? 'ml' : 'g'))
 
 function handleSubmit() {
   if (!timeValue.value) return
@@ -76,7 +86,11 @@ function handleSubmit() {
     return
   }
   const n = parseFloat(amount.value)
-  if (Number.isNaN(n) || n < 0) return
+  if (Number.isNaN(n)) return
+  // 新增走 POST /api/records，後端規則是「amount 必須 > 0」，這裡先擋掉避免打一次無效的請求。
+  // 編輯（PATCH）則不能用同一條規則：這筆紀錄如果是「先給後測」量測完成算出來的，
+  // amount 本來就可能是 0 或負數，編輯時（哪怕只是想改備註）不能因此被擋下來。
+  if (props.mode === 'add' && n <= 0) return
   emit('save', { amount: n, timeValue: timeValue.value, note: note.value.trim() })
 }
 </script>
@@ -84,13 +98,9 @@ function handleSubmit() {
 <template>
   <BaseSheet :open="open" :title="title" @cancel="emit('cancel')">
     <form @submit.prevent="handleSubmit">
-      <div v-if="!isLitter(type)" class="field">
-        <label for="fAmount">{{ amountLabel }}</label>
-        <input id="fAmount" v-model="amount" type="number" inputmode="decimal" step="0.1" min="0" required />
-      </div>
       <div class="field">
-        <label for="fTime">時間</label>
-        <input id="fTime" v-model="timeValue" type="datetime-local" required />
+        <label>時間</label>
+        <DateTimePicker :key="formInstanceKey" v-model="timeValue" />
       </div>
       <div class="field">
         <label for="fNote">備註</label>
@@ -112,9 +122,36 @@ function handleSubmit() {
           </button>
         </div>
       </div>
-      <div class="sheet-actions">
+
+      <!-- 水/飼料：用計算機鍵盤輸入數量，按「確定」兩次才會真的送出
+           （第一次算出結果、第二次才是儲存），因此這裡不再另外放「儲存」按鈕。 -->
+      <template v-if="!isLitter(type)">
+        <div class="field">
+          <ExpandableField v-model:expanded="calcExpanded">
+            <template #summary>
+              <span class="amount-summary-label">{{ amountLabel }}</span>
+              <span class="amount-summary-value">
+                {{ amount || '尚未輸入' }}<span v-if="amount"> {{ amountUnit }}</span>
+              </span>
+            </template>
+            <CalculatorPad
+              v-model="amount"
+              :type="type === 'water' ? 'water' : 'food'"
+              :unit="amountUnit"
+              :saving="saving"
+              :require-positive="mode === 'add'"
+              @confirm="handleSubmit"
+            />
+          </ExpandableField>
+        </div>
+        <div class="sheet-actions minimal">
+          <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
+        </div>
+      </template>
+
+      <div v-else class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
-        <button type="submit" class="btn primary" :class="{ food: type === 'food', litter: isLitter(type) }" :disabled="saving">
+        <button type="submit" class="btn primary litter" :disabled="saving">
           {{ saving ? '儲存中…' : '儲存' }}
         </button>
       </div>
@@ -127,24 +164,26 @@ function handleSubmit() {
   margin-top: 8px;
 }
 
-/* iOS Safari 的原生 datetime-local 外觀會影響欄位對齊。 */
-.field input[type='datetime-local'] {
-  -webkit-appearance: none;
-  appearance: none;
-  min-height: 40px;
-  line-height: 1.3;
-  text-align: left;
+/* 水/飼料表單沒有另外的「儲存」鍵（計算機的確定鍵兼任），取消鍵改成置中的次要按鈕。 */
+.sheet-actions.minimal {
+  justify-content: center;
 }
 
-.field input[type='datetime-local']::-webkit-date-and-time-value {
-  text-align: left;
-  margin: 0;
-  padding: 0;
+.sheet-actions.minimal .btn {
+  flex: none;
+  min-width: 120px;
 }
 
-.field input[type='datetime-local']::-webkit-datetime-edit {
-  text-align: left;
-  padding: 0;
-  margin: 0;
+.amount-summary-label {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.amount-summary-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.98rem;
 }
 </style>

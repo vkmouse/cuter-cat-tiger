@@ -50,6 +50,14 @@ export function requirePositiveNumber(value: unknown, field: string): number {
   return num
 }
 
+export function requireNonNegativeNumber(value: unknown, field: string): number {
+  const num = requireFiniteNumber(value, field)
+  if (num < 0) {
+    throw new ApiError(400, `${field} 不能小於 0`)
+  }
+  return num
+}
+
 export function requirePositiveInt(value: unknown, field: string): number {
   const num = typeof value === 'string' ? Number(value) : value
   if (typeof num !== 'number' || !Number.isInteger(num) || num <= 0) {
@@ -87,6 +95,15 @@ export function requireRecordType(value: unknown): RecordType {
     throw new ApiError(400, "type 僅接受 'water'、'food'、'pee' 或 'poop'")
   }
   return value
+}
+
+/** feeding session 只有先給後測的 water/food 情境會用到，沒有 pee/poop。 */
+export function requireFeedingSessionType(value: unknown): 'water' | 'food' {
+  const type = requireRecordType(value)
+  if (!isQuantifiedType(type)) {
+    throw new ApiError(400, "type 僅接受 'water' 或 'food'")
+  }
+  return type
 }
 
 export function requireUnitForType(type: 'water' | 'food', unit: unknown): RecordUnit {

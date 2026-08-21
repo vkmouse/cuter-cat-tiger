@@ -56,18 +56,25 @@ export async function findRecordById(db: D1Database, id: number): Promise<Record
   return row ?? null
 }
 
-export async function insertRecord(
+/** 只組出 statement 不執行，供需要跟其他表一起放進 db.batch() 交易的呼叫端使用（例如 feeding session 完成時）。 */
+export function buildInsertRecordStatement(
   db: D1Database,
   input: InsertRecordInput,
-): Promise<RecordRow> {
-  const row = await db
+): D1PreparedStatement {
+  return db
     .prepare(
       `INSERT INTO records (cat_id, type, amount, unit, note, occurred_at)
        VALUES (?, ?, ?, ?, ?, ?)
        RETURNING ${RECORD_COLUMNS}`,
     )
     .bind(input.cat_id, input.type, input.amount, input.unit, input.note, input.occurred_at)
-    .first<RecordRow>()
+}
+
+export async function insertRecord(
+  db: D1Database,
+  input: InsertRecordInput,
+): Promise<RecordRow> {
+  const row = await buildInsertRecordStatement(db, input).first<RecordRow>()
   if (!row) {
     throw new Error('INSERT records 未回傳資料')
   }

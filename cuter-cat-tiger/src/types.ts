@@ -69,3 +69,33 @@ export interface UpdateRecordPayload {
 export interface ApiErrorBody {
   error: string
 }
+
+/** 先給後測：給水/飼料時先記下給了多少，等一段時間量出剩多少後才轉成一筆 CatRecord。 */
+export interface FeedingSession {
+  id: number
+  catId: number
+  type: 'water' | 'food'
+  givenAmount: number
+  unit: RecordUnit
+  givenAt: string // ISO, UTC
+  updatedAt: string | null
+}
+
+export interface CreateFeedingSessionPayload {
+  catId: number
+  type: 'water' | 'food'
+  amount: number
+  unit: RecordUnit
+}
+
+export interface UpdateFeedingSessionPayload {
+  amount: number
+}
+
+export interface CompleteFeedingSessionPayload {
+  // 送「剩下多少」而不是前端自己算好的「吃了多少」，consumed 一律由伺服器用 given_amount 重新算出，
+  // 避免前端算錯或被竄改。
+  remainingAmount: number
+  occurredAt?: string
+  note?: string | null
+}
