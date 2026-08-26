@@ -2,11 +2,11 @@
 import { computed, ref, watch } from 'vue'
 
 /**
- * 仿照 JaNote CalculatorPad 的互動邏輯（pending operator 狀態機）：
- * - 按運算符號（+ − × ÷）進入 pending 狀態，畫面顯示第一個運算元 + 運算符提示
+ * 簡化版 CalculatorPad（pending operator 狀態機）：
+ * - 只保留加減、AC、0～9，拿掉乘除、小數點、退格、00（記錄的量用不到）
+ * - 按運算符號（+ −）進入 pending 狀態，畫面顯示第一個運算元 + 運算符提示
  * - 再輸入第二個數字後，按鍵顯示「=」，只計算並套用結果
- * - 沒有 pending 狀態時，同一顆鍵顯示「確定」——這點跟 JaNote 一樣是同一顆按鍵
- * - 跟 JaNote 不同的地方：
+ * - 沒有 pending 狀態時，同一顆鍵顯示「確定」
  *   1. 「確定」不是真的送出表單，只是把外層 ExpandableField 摺疊起來（emit 'collapse'），
  *      實際存檔仍由外層表單最下方的「儲存」按鈕負責
  *   2. 多加了「結果為負數要擋下來」的規則（cat app 的數量不能是負的）
@@ -71,8 +71,6 @@ function calculate(a: string, op: string, b: string): number | null {
   if (Number.isNaN(numA) || Number.isNaN(numB)) return null
   if (op === '+') return numA + numB
   if (op === '−') return numA - numB
-  if (op === '×') return numA * numB
-  if (op === '÷') return numB === 0 ? null : numA / numB
   return null
 }
 
@@ -129,17 +127,7 @@ function handleKey(key: string) {
     return
   }
 
-  if (key === '←') {
-    if (pendingOperator.value) {
-      amount.value = firstOperand.value
-      clearPending()
-    } else {
-      amount.value = amount.value.slice(0, -1)
-    }
-    return
-  }
-
-  if (key === '+' || key === '−' || key === '×' || key === '÷') {
+  if (key === '+' || key === '−') {
     if (pendingOperator.value) {
       if (hasSecondInput.value) {
         const result = calculate(firstOperand.value, pendingOperator.value, amount.value)
@@ -170,19 +158,9 @@ function handleKey(key: string) {
     return
   }
 
-  if (key === '.') {
-    if (pendingOperator.value && !hasSecondInput.value) {
-      amount.value = '0.'
-      hasSecondInput.value = true
-      return
-    }
-    if (!amount.value.includes('.')) amount.value += key
-    return
-  }
-
-  // 數字鍵（含 00）
+  // 數字鍵（0～9）
   if (pendingOperator.value && !hasSecondInput.value) {
-    amount.value = key === '00' ? '0' : key
+    amount.value = key
     hasSecondInput.value = true
     return
   }
@@ -191,26 +169,19 @@ function handleKey(key: string) {
 
 interface CalcKey {
   key: string
-  kind: 'num' | 'op' | 'fn' | 'confirm'
+  kind: 'num' | 'op'
 }
 
-const KEYS: CalcKey[] = [
-  { key: '7', kind: 'num' }, { key: '8', kind: 'num' }, { key: '9', kind: 'num' }, { key: '÷', kind: 'op' }, { key: 'AC', kind: 'fn' },
-  { key: '4', kind: 'num' }, { key: '5', kind: 'num' }, { key: '6', kind: 'num' }, { key: '×', kind: 'op' }, { key: '←', kind: 'fn' },
-  { key: '1', kind: 'num' }, { key: '2', kind: 'num' }, { key: '3', kind: 'num' }, { key: '+', kind: 'op' }, { key: '確定', kind: 'confirm' },
-  { key: '00', kind: 'num' }, { key: '0', kind: 'num' }, { key: '.', kind: 'num' }, { key: '−', kind: 'op' },
+// 4 欄 × 3 列：每列前 3 格是數字，第 4 格是該列的功能鍵（AC / + / −）。
+// 0（佔 3 格）與 =/確定 另外在 template 裡固定放在格線最後一列，不放進這份陣列。
+const GRID_KEYS: CalcKey[] = [
+  { key: '7', kind: 'num' }, { key: '8', kind: 'num' }, { key: '9', kind: 'num' }, { key: 'AC', kind: 'op' },
+  { key: '4', kind: 'num' }, { key: '5', kind: 'num' }, { key: '6', kind: 'num' }, { key: '+', kind: 'op' },
+  { key: '1', kind: 'num' }, { key: '2', kind: 'num' }, { key: '3', kind: 'num' }, { key: '−', kind: 'op' },
 ]
 
-function keyLabel(k: CalcKey) {
-  return k.kind === 'confirm' ? confirmLabel.value : k.key
-}
-
-function handleKeyClick(k: CalcKey) {
-  if (k.kind === 'confirm') {
-    handleConfirmClick()
-  } else {
-    handleKey(k.key)
-  }
+function handleKeyClick(key: string) {
+  handleKey(key)
 }
 </script>
 
@@ -221,23 +192,33 @@ function handleKeyClick(k: CalcKey) {
       <div class="calc-value">{{ amount || '0' }}<span class="calc-unit"> {{ unit }}</span></div>
     </div>
     <p v-if="errorMsg" class="calc-error">{{ errorMsg }}</p>
-    <div class="calc-grid">
+    <div class="calc-keys">
       <button
-        v-for="k in KEYS"
+        v-for="k in GRID_KEYS"
         :key="k.key"
         type="button"
         class="calc-btn"
-        :class="[
-          k.kind === 'num' ? 'number-btn' : '',
-          k.kind === 'op' ? 'function-btn' : '',
-          k.kind === 'fn' ? 'function-btn' : '',
-          k.kind === 'confirm' ? 'confirm-btn' : '',
-          { 'operator-active': k.kind === 'op' && pendingOperator === k.key },
-        ]"
-        :disabled="saving || (k.kind === 'confirm' && !confirmEnabled)"
-        @click="handleKeyClick(k)"
+        :class="k.kind === 'num' ? 'number-btn' : (k.key === 'AC' ? 'reset-btn' : ['function-btn', { 'operator-active': pendingOperator === k.key }])"
+        :disabled="saving"
+        @click="handleKeyClick(k.key)"
       >
-        {{ keyLabel(k) }}
+        {{ k.key }}
+      </button>
+      <button
+        type="button"
+        class="calc-btn number-btn zero-btn"
+        :disabled="saving"
+        @click="handleKey('0')"
+      >
+        0
+      </button>
+      <button
+        type="button"
+        class="calc-btn confirm-btn"
+        :disabled="saving || !confirmEnabled"
+        @click="handleConfirmClick"
+      >
+        {{ confirmLabel }}
       </button>
     </div>
   </div>
@@ -283,10 +264,15 @@ function handleKeyClick(k: CalcKey) {
   color: #b3452f;
 }
 
-.calc-grid {
+/* 4 欄 grid：3x3 數字 + 每列一顆功能鍵，最後一列 0（佔 3 格）+ =/確定 */
+.calc-keys {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 6px;
+}
+
+.zero-btn {
+  grid-column: span 3;
 }
 
 .calc-btn {
@@ -317,12 +303,30 @@ function handleKeyClick(k: CalcKey) {
   color: #fff;
 }
 
+/* AC：輕量、無邊框，跟常按的數字／運算鍵拉開視覺重量，暗示「重置」不是日常動作 */
+.calc-btn.reset-btn {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.calc-btn.reset-btn:active {
+  color: var(--ink);
+}
+
+.calc-btn.number-btn {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+}
+
 .calc-btn.confirm-btn {
+  width: 100%;
   background: var(--calc-accent);
   color: #fff;
   border-color: var(--calc-accent);
-  grid-row: span 2;
-  padding: 0;
+  padding: 13px 0;
 }
 
 .calc-btn.confirm-btn:disabled {
