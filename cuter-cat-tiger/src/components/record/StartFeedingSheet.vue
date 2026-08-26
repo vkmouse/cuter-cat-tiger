@@ -9,7 +9,7 @@ import { getQuickNotes } from '../../composables/useQuickNotes'
 /**
  * 先給後測流程 step 1：只記下「給了多少」，建立/編輯一筆 FeedingSession。
  * 從 RecordFormSheet 拆出來（原本用內部 action state 切換），
- * 拆開後跟一般紀錄完全獨立：沒有時間、沒有備註、沒有 litter 分支，
+ * 拆開後跟一般紀錄完全獨立：沒有時間、沒有 litter 分支；備註欄位沿用一般紀錄的樣式並放在數量下方。
  * 量一律要求 > 0（先給後測不會有「這次給了 0」的情境）。
  *
  * 新增模式下畫面頂端仍保留跟「記錄」切換的 pill：
@@ -97,23 +97,6 @@ function handleSubmit() {
       </div>
 
       <div class="field">
-        <label for="fStartFeedingNote">備註</label>
-        <input id="fStartFeedingNote" v-model="note" type="text" />
-        <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: type === 'food' }">
-          <button
-            v-for="text in quickNotes"
-            :key="text"
-            type="button"
-            class="pill"
-            :class="{ active: note === text }"
-            @click="applyQuickNote(text)"
-          >
-            {{ text }}
-          </button>
-        </div>
-      </div>
-
-      <div class="field">
         <ExpandableField v-model:expanded="calcExpanded">
           <template #summary>
             <span class="amount-summary-value" :class="{ placeholder: !amount }">
@@ -130,6 +113,23 @@ function handleSubmit() {
             @collapse="calcExpanded = false"
           />
         </ExpandableField>
+      </div>
+
+      <div class="field">
+        <label for="fStartFeedingNote">備註</label>
+        <input id="fStartFeedingNote" v-model="note" type="text" />
+        <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: type === 'food' }">
+          <button
+            v-for="text in quickNotes"
+            :key="text"
+            type="button"
+            class="pill"
+            :class="{ active: note === text }"
+            @click="applyQuickNote(text)"
+          >
+            {{ text }}
+          </button>
+        </div>
       </div>
 
       <div class="sheet-actions">
