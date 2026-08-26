@@ -32,6 +32,7 @@ const INIT_STATEMENTS = [
      type          TEXT NOT NULL,
      given_amount  REAL NOT NULL,
      unit          TEXT NOT NULL,
+     note          TEXT,
      given_at      TEXT NOT NULL DEFAULT (datetime('now')),
      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
      updated_at    TEXT

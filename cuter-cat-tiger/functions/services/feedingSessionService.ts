@@ -22,6 +22,7 @@ export interface FeedingSessionDto {
   type: 'water' | 'food'
   givenAmount: number
   unit: string
+  note: string | null
   givenAt: string
   updatedAt: string | null
 }
@@ -33,6 +34,7 @@ function toDto(row: FeedingSessionRow): FeedingSessionDto {
     type: row.type,
     givenAmount: row.given_amount,
     unit: row.unit,
+    note: row.note,
     givenAt: sqliteUtcToIso(row.given_at),
     updatedAt: row.updated_at ? sqliteUtcToIso(row.updated_at) : null,
   }
@@ -70,6 +72,7 @@ export async function createFeedingSession(
   const type = requireFeedingSessionType(body.type)
   const givenAmount = requireGivenAmount(body.amount)
   const unit = requireUnitForType(type, body.unit)
+  const note = body.note === undefined || body.note === null ? null : String(body.note).trim() || null
 
   const cat = await catRepository.findCatById(db, catId)
   if (!cat) {
@@ -81,6 +84,7 @@ export async function createFeedingSession(
     type,
     given_amount: givenAmount,
     unit,
+    note,
   })
   return toDto(row)
 }
@@ -96,8 +100,9 @@ export async function updateFeedingSession(
     throw new ApiError(400, '至少要帶 amount 欄位')
   }
   const givenAmount = requireGivenAmount(body.amount)
+  const note = body.note === undefined || body.note === null ? undefined : String(body.note).trim() || null
 
-  const row = await feedingSessionRepository.updateGivenAmount(db, id, givenAmount)
+  const row = await feedingSessionRepository.updateGivenAmount(db, id, givenAmount, note)
   if (!row) {
     throw new ApiError(404, `找不到 id=${id} 的餵食紀錄`)
   }
@@ -131,7 +136,11 @@ export async function completeFeedingSession(
 
   const remainingAmount = requireNonNegativeNumber(body.remainingAmount, 'remainingAmount')
   const occurredAt = optionalIsoDateTime(body.occurredAt, 'occurredAt') ?? new Date().toISOString()
-  const note = body.note === undefined || body.note === null ? null : String(body.note)
+  const note = body.note === undefined
+    ? session.note
+    : body.note === null
+      ? null
+      : String(body.note).trim() || null
 
   const amount = session.given_amount - remainingAmount
 

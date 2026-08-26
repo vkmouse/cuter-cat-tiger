@@ -4,6 +4,7 @@ export interface FeedingSessionRow {
   type: 'water' | 'food'
   given_amount: number
   unit: string
+  note: string | null
   given_at: string
   created_at: string
   updated_at: string | null
@@ -14,9 +15,10 @@ export interface InsertFeedingSessionInput {
   type: 'water' | 'food'
   given_amount: number
   unit: string
+  note: string | null
 }
 
-const FEEDING_SESSION_COLUMNS = `id, cat_id, type, given_amount, unit, given_at, created_at, updated_at`
+const FEEDING_SESSION_COLUMNS = `id, cat_id, type, given_amount, unit, note, given_at, created_at, updated_at`
 
 export async function listFeedingSessionsByCatId(
   db: D1Database,
@@ -51,11 +53,11 @@ export async function insertFeedingSession(
 ): Promise<FeedingSessionRow> {
   const row = await db
     .prepare(
-      `INSERT INTO feeding_sessions (cat_id, type, given_amount, unit)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO feeding_sessions (cat_id, type, given_amount, unit, note)
+       VALUES (?, ?, ?, ?, ?)
        RETURNING ${FEEDING_SESSION_COLUMNS}`,
     )
-    .bind(input.cat_id, input.type, input.given_amount, input.unit)
+    .bind(input.cat_id, input.type, input.given_amount, input.unit, input.note ?? null)
     .first<FeedingSessionRow>()
   if (!row) {
     throw new Error('INSERT feeding_sessions 未回傳資料')
@@ -67,13 +69,14 @@ export async function updateGivenAmount(
   db: D1Database,
   id: number,
   givenAmount: number,
+  note?: string | null,
 ): Promise<FeedingSessionRow | null> {
   const row = await db
     .prepare(
-      `UPDATE feeding_sessions SET given_amount = ?, updated_at = datetime('now') WHERE id = ?
+      `UPDATE feeding_sessions SET given_amount = ?, note = ?, updated_at = datetime('now') WHERE id = ?
        RETURNING ${FEEDING_SESSION_COLUMNS}`,
     )
-    .bind(givenAmount, id)
+    .bind(givenAmount, note ?? null, id)
     .first<FeedingSessionRow>()
   return row ?? null
 }

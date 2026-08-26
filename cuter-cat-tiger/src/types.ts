@@ -77,6 +77,7 @@ export interface FeedingSession {
   type: 'water' | 'food'
   givenAmount: number
   unit: RecordUnit
+  note: string | null
   givenAt: string // ISO, UTC
   updatedAt: string | null
 }
@@ -86,10 +87,12 @@ export interface CreateFeedingSessionPayload {
   type: 'water' | 'food'
   amount: number
   unit: RecordUnit
+  note?: string | null
 }
 
 export interface UpdateFeedingSessionPayload {
   amount: number
+  note?: string | null
 }
 
 export interface CompleteFeedingSessionPayload {

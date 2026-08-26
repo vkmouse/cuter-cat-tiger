@@ -181,7 +181,7 @@ async function handleRecordSave(payload: { amount?: number; timeValue: string; n
   closeRecordSheet()
 }
 
-async function handleFeedingSave(payload: { amount: number }) {
+async function handleFeedingSave(payload: { amount: number; note: string }) {
   if (feedingSheetMode.value === 'add') {
     if (activeCatId.value == null) return
     await startSession({
@@ -189,9 +189,13 @@ async function handleFeedingSave(payload: { amount: number }) {
       type: feedingSheetType.value,
       amount: payload.amount,
       unit: feedingSheetType.value === 'water' ? 'ml' : 'g',
+      note: payload.note || null,
     })
   } else if (editingFeedingSession.value) {
-    await editSession(editingFeedingSession.value.id, { amount: payload.amount })
+    await editSession(editingFeedingSession.value.id, {
+      amount: payload.amount,
+      note: payload.note || null,
+    })
   }
   closeFeedingSheet()
 }

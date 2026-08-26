@@ -4,6 +4,7 @@ import type { FeedingSession } from '../../types'
 import BaseSheet from '../ui/BaseSheet.vue'
 import ExpandableField from '../ui/ExpandableField.vue'
 import CalculatorPad from './CalculatorPad.vue'
+import { getQuickNotes } from '../../composables/useQuickNotes'
 
 /**
  * 先給後測流程 step 1：只記下「給了多少」，建立/編輯一筆 FeedingSession。
@@ -33,12 +34,14 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   cancel: []
-  save: [payload: { amount: number }]
+  save: [payload: { amount: number; note: string }]
   // 帶上目前輸入的量，讓呼叫端可以原封不動延續到 RecordFormSheet。
   'switch-to-record': [amount: string]
 }>()
 
 const amount = ref('')
+const note = ref('')
+const quickNotes = ref<string[]>([])
 const calcExpanded = ref(true)
 const formInstanceKey = ref(0)
 
@@ -49,9 +52,12 @@ watch(
 
     if (props.mode === 'edit' && props.feedingSession) {
       amount.value = String(props.feedingSession.givenAmount)
+      note.value = props.feedingSession.note ?? ''
     } else {
+      note.value = ''
       amount.value = props.initialAmount ?? '0'
     }
+    quickNotes.value = getQuickNotes(props.type)
     calcExpanded.value = true
     formInstanceKey.value += 1
   },
@@ -67,10 +73,14 @@ const title = computed(() => {
 
 const amountUnit = computed(() => (props.type === 'water' ? 'ml' : 'g'))
 
+function applyQuickNote(text: string) {
+  note.value = text
+}
+
 function handleSubmit() {
   const n = parseFloat(amount.value)
   if (Number.isNaN(n) || n <= 0) return
-  emit('save', { amount: n })
+  emit('save', { amount: n, note: note.value.trim() })
 }
 </script>
 
@@ -84,6 +94,23 @@ function handleSubmit() {
         <button type="button" class="action-toggle-option active" disabled>
           {{ type === 'water' ? '開始餵水' : '開始餵飼料' }}
         </button>
+      </div>
+
+      <div class="field">
+        <label for="fStartFeedingNote">備註</label>
+        <input id="fStartFeedingNote" v-model="note" type="text" />
+        <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: type === 'food' }">
+          <button
+            v-for="text in quickNotes"
+            :key="text"
+            type="button"
+            class="pill"
+            :class="{ active: note === text }"
+            @click="applyQuickNote(text)"
+          >
+            {{ text }}
+          </button>
+        </div>
       </div>
 
       <div class="field">
@@ -152,6 +179,10 @@ function handleSubmit() {
 
 .action-toggle-option:disabled {
   cursor: default;
+}
+
+.quick-notes {
+  margin-top: 8px;
 }
 
 .amount-summary-value {

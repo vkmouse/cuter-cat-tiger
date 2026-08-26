@@ -34,7 +34,7 @@ watch(
     if (!isOpen || !props.session) return
     remaining.value = '0'
     timeValue.value = nowDateTimeLocalValue()
-    note.value = ''
+    note.value = props.session.note ?? ''
     quickNotes.value = getQuickNotes(props.session.type)
     calcExpanded.value = true
     formInstanceKey.value += 1
