@@ -58,7 +58,7 @@ watch(
       quickNotes.value = getQuickNotes(props.type)
       calcExpanded.value = !isLitter(props.type)
     } else {
-      amount.value = props.initialAmount ?? ''
+      amount.value = props.initialAmount ?? '0'
       timeValue.value = nowDateTimeLocalValue()
       note.value = ''
       quickNotes.value = getQuickNotes(props.type)

@@ -32,7 +32,7 @@ watch(
   () => props.open,
   (isOpen) => {
     if (!isOpen || !props.session) return
-    remaining.value = ''
+    remaining.value = '0'
     timeValue.value = nowDateTimeLocalValue()
     note.value = ''
     quickNotes.value = getQuickNotes(props.session.type)

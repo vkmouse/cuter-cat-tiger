@@ -50,7 +50,7 @@ watch(
     if (props.mode === 'edit' && props.feedingSession) {
       amount.value = String(props.feedingSession.givenAmount)
     } else {
-      amount.value = props.initialAmount ?? ''
+      amount.value = props.initialAmount ?? '0'
     }
     calcExpanded.value = true
     formInstanceKey.value += 1

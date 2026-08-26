@@ -124,7 +124,7 @@ function handleKey(key: string) {
   errorMsg.value = ''
 
   if (key === 'AC') {
-    amount.value = ''
+    amount.value = '0'
     clearPending()
     return
   }
@@ -166,7 +166,9 @@ function handleKey(key: string) {
     hasSecondInput.value = true
     return
   }
-  amount.value += key
+  // 目前顯示是 '0' 時（開機預設值，或 AC 清除後），下一個數字鍵要直接取代，
+  // 否則會變成 '05' 這種帶多餘前導零的怪異結果。
+  amount.value = amount.value === '0' ? key : amount.value + key
 }
 
 interface CalcKey {
