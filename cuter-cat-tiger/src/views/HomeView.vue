@@ -96,23 +96,29 @@ const recordSheetOpen = ref(false)
 const recordSheetMode = ref<'add' | 'edit'>('add')
 const recordSheetType = ref<RecordType>('water')
 const editingRecord = ref<CatRecord | null>(null)
+// 只在「從 StartFeedingSheet 切換過來」時會帶值，開給 RecordFormSheet 的 :initial-amount 用。
+const recordSheetInitialAmount = ref('')
 
 const feedingSheetOpen = ref(false)
 const feedingSheetMode = ref<'add' | 'edit'>('add')
 const feedingSheetType = ref<'water' | 'food'>('water')
 const editingFeedingSession = ref<FeedingSession | null>(null)
+// 只在「從 RecordFormSheet 切換過來」時會帶值，開給 StartFeedingSheet 的 :initial-amount 用。
+const feedingSheetInitialAmount = ref('')
 
-function openAddRecord(type: RecordType) {
+function openAddRecord(type: RecordType, initialAmount = '') {
   recordSheetMode.value = 'add'
   recordSheetType.value = type
   editingRecord.value = null
+  recordSheetInitialAmount.value = initialAmount
   recordSheetOpen.value = true
 }
 
-function openStartFeedingSession(type: 'water' | 'food') {
+function openStartFeedingSession(type: 'water' | 'food', initialAmount = '') {
   feedingSheetMode.value = 'add'
   feedingSheetType.value = type
   editingFeedingSession.value = null
+  feedingSheetInitialAmount.value = initialAmount
   feedingSheetOpen.value = true
 }
 
@@ -139,16 +145,16 @@ function closeFeedingSheet() {
 }
 
 // Sheet 頂端的 pill 只是換一顆 sheet，不是切內部狀態：關掉目前這個，開另一個。
-// 兩邊本來就會把 amount 清空重填，所以切換時沒有輸入內容需要保留。
-function switchRecordToFeeding() {
+// 計算機輸入的量要延續過去，所以把切換當下的 amount 一起帶給新開的 sheet。
+function switchRecordToFeeding(amount: string) {
   if (recordSheetType.value !== 'water' && recordSheetType.value !== 'food') return
   closeRecordSheet()
-  openStartFeedingSession(recordSheetType.value)
+  openStartFeedingSession(recordSheetType.value, amount)
 }
 
-function switchFeedingToRecord() {
+function switchFeedingToRecord(amount: string) {
   closeFeedingSheet()
-  openAddRecord(feedingSheetType.value)
+  openAddRecord(feedingSheetType.value, amount)
 }
 
 async function handleRecordSave(payload: { amount?: number; timeValue: string; note: string }) {
@@ -355,6 +361,7 @@ async function handleConfirmDelete() {
     :cat-name="activeCatName"
     :record="editingRecord"
     :saving="saving"
+    :initial-amount="recordSheetInitialAmount"
     @cancel="closeRecordSheet"
     @save="handleRecordSave"
     @switch-to-feeding="switchRecordToFeeding"
@@ -367,6 +374,7 @@ async function handleConfirmDelete() {
     :cat-name="activeCatName"
     :feeding-session="editingFeedingSession"
     :saving="feedingSessionSaving"
+    :initial-amount="feedingSheetInitialAmount"
     @cancel="closeFeedingSheet"
     @save="handleFeedingSave"
     @switch-to-record="switchFeedingToRecord"

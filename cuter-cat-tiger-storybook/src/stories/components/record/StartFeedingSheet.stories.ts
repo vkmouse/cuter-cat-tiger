@@ -47,6 +47,10 @@ const meta = {
       control: 'boolean',
       description: '儲存中時按鈕文字改為「儲存中…」且 disabled。',
     },
+    initialAmount: {
+      control: 'text',
+      description: 'add 模式下的初始金額。從 RecordFormSheet 切換 pill 過來時，由呼叫端帶入延續輸入的量。',
+    },
     cancel: { action: 'cancel' },
     save: { action: 'save' },
     'switch-to-record': { action: 'switch-to-record' },

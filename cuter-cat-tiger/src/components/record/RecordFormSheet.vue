@@ -13,7 +13,8 @@ import DateTimePicker from './DateTimePicker.vue'
  * 「開始餵食」（先給後測）已拆到 StartFeedingSheet，這裡不再處理 feedingSession，
  * 也不再需要 action 這個維度——payload 形狀單純只有一種。
  * 新增模式下 water/food 類型仍保留可以切去「開始餵」的 pill，
- * 但這裡只 emit switch-to-feeding，實際換開哪個 sheet交給呼叫端決定。
+ * 這裡 emit switch-to-feeding(amount)，把目前輸入的量帶出去，實際換開哪個 sheet、
+ * 要不要延續這個量交給呼叫端決定。
  */
 
 const props = defineProps<{
@@ -23,12 +24,16 @@ const props = defineProps<{
   catName: string
   record?: CatRecord | null
   saving?: boolean
+  // 從 StartFeedingSheet 透過切換 pill 過來時，帶著對方當下輸入的量延續顯示；
+  // 只在 mode === 'add' 時採用，edit 模式一律以 record 本身的量為準。
+  initialAmount?: string
 }>()
 
 const emit = defineEmits<{
   cancel: []
   save: [payload: { amount?: number; timeValue: string; note: string }]
-  'switch-to-feeding': []
+  // 帶上目前輸入的量，讓呼叫端可以原封不動延續到 StartFeedingSheet。
+  'switch-to-feeding': [amount: string]
 }>()
 
 const amount = ref('')
@@ -53,7 +58,7 @@ watch(
       quickNotes.value = getQuickNotes(props.type)
       calcExpanded.value = !isLitter(props.type)
     } else {
-      amount.value = ''
+      amount.value = props.initialAmount ?? ''
       timeValue.value = nowDateTimeLocalValue()
       note.value = ''
       quickNotes.value = getQuickNotes(props.type)
@@ -110,7 +115,7 @@ function handleSubmit() {
         <button type="button" class="action-toggle-option active" disabled>
           {{ type === 'water' ? '記錄喝水' : '記錄飼料' }}
         </button>
-        <button type="button" class="action-toggle-option" @click="emit('switch-to-feeding')">
+        <button type="button" class="action-toggle-option" @click="emit('switch-to-feeding', amount)">
           {{ type === 'water' ? '開始餵水' : '開始餵飼料' }}
         </button>
       </div>

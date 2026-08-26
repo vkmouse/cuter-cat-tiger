@@ -162,6 +162,8 @@ const recordSheetMode = ref<'add' | 'edit'>('add')
 const recordSheetType = ref<RecordType>('water')
 const editingRecord = ref<CatRecord | null>(null)
 const recordSaving = ref(false)
+// 只在「從 StartFeedingSheet 切換過來」時會帶值，開給 RecordFormSheet 的 :initial-amount 用。
+const recordSheetInitialAmount = ref('')
 
 // ---------- 開始餵/修改給的量底部抽屜（先給後測 step 1） ----------
 const feedingSheetOpen = ref(false)
@@ -169,18 +171,22 @@ const feedingSheetMode = ref<'add' | 'edit'>('add')
 const feedingSheetType = ref<'water' | 'food'>('water')
 const editingFeedingSession = ref<FeedingSession | null>(null)
 const feedingSessionSaving = ref(false)
+// 只在「從 RecordFormSheet 切換過來」時會帶值，開給 StartFeedingSheet 的 :initial-amount 用。
+const feedingSheetInitialAmount = ref('')
 
-function openAddRecord(type: RecordType) {
+function openAddRecord(type: RecordType, initialAmount = '') {
   recordSheetMode.value = 'add'
   recordSheetType.value = type
   editingRecord.value = null
+  recordSheetInitialAmount.value = initialAmount
   recordSheetOpen.value = true
 }
 
-function openStartFeedingSession(type: 'water' | 'food') {
+function openStartFeedingSession(type: 'water' | 'food', initialAmount = '') {
   feedingSheetMode.value = 'add'
   feedingSheetType.value = type
   editingFeedingSession.value = null
+  feedingSheetInitialAmount.value = initialAmount
   feedingSheetOpen.value = true
 }
 
@@ -206,15 +212,15 @@ function closeFeedingSheet() {
   feedingSheetOpen.value = false
 }
 
-function switchRecordToFeeding() {
+function switchRecordToFeeding(amount: string) {
   if (recordSheetType.value !== 'water' && recordSheetType.value !== 'food') return
   closeRecordSheet()
-  openStartFeedingSession(recordSheetType.value)
+  openStartFeedingSession(recordSheetType.value, amount)
 }
 
-function switchFeedingToRecord() {
+function switchFeedingToRecord(amount: string) {
   closeFeedingSheet()
-  openAddRecord(feedingSheetType.value)
+  openAddRecord(feedingSheetType.value, amount)
 }
 
 function handleRecordSave(payload: { amount?: number; timeValue: string; note: string }) {
@@ -493,6 +499,7 @@ function resetDemo() {
     :cat-name="activeCatName"
     :record="editingRecord"
     :saving="recordSaving"
+    :initial-amount="recordSheetInitialAmount"
     @cancel="closeRecordSheet"
     @save="handleRecordSave"
     @switch-to-feeding="switchRecordToFeeding"
@@ -505,6 +512,7 @@ function resetDemo() {
     :cat-name="activeCatName"
     :feeding-session="editingFeedingSession"
     :saving="feedingSessionSaving"
+    :initial-amount="feedingSheetInitialAmount"
     @cancel="closeFeedingSheet"
     @save="handleFeedingSave"
     @switch-to-record="switchFeedingToRecord"
