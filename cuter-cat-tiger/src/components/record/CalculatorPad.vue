@@ -95,6 +95,8 @@ function applyCalculation(): boolean {
   }
   errorMsg.value = ''
   amount.value = String(round2(result))
+  // 算式已結束：清掉 pending 狀態，讓按鍵變回「確定」，避免卡在「=」誤導使用者以為還能接著算。
+  clearPending()
   return true
 }
 
