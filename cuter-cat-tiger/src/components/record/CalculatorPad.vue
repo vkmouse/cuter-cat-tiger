@@ -172,7 +172,7 @@ interface CalcKey {
   kind: 'num' | 'op'
 }
 
-// 4 欄 × 3 列：每列前 3 格是數字，第 4 格是該列的功能鍵（AC / + / −）。
+// 4 欄 × 3 列：每列前 3 格是數字，第 4 格是該列的功能鍵（AC / + / −，三顆視覺風格統一）。
 // 0（佔 3 格）與 =/確定 另外在 template 裡固定放在格線最後一列，不放進這份陣列。
 const GRID_KEYS: CalcKey[] = [
   { key: '7', kind: 'num' }, { key: '8', kind: 'num' }, { key: '9', kind: 'num' }, { key: 'AC', kind: 'op' },
@@ -198,7 +198,7 @@ function handleKeyClick(key: string) {
         :key="k.key"
         type="button"
         class="calc-btn"
-        :class="k.kind === 'num' ? 'number-btn' : (k.key === 'AC' ? 'reset-btn' : ['function-btn', { 'operator-active': pendingOperator === k.key }])"
+        :class="k.kind === 'num' ? 'number-btn' : ['function-btn', { 'operator-active': pendingOperator === k.key }]"
         :disabled="saving"
         @click="handleKeyClick(k.key)"
       >
@@ -301,19 +301,6 @@ function handleKeyClick(key: string) {
 .calc-btn.function-btn.operator-active {
   background: var(--calc-accent);
   color: #fff;
-}
-
-/* AC：輕量、無邊框，跟常按的數字／運算鍵拉開視覺重量，暗示「重置」不是日常動作 */
-.calc-btn.reset-btn {
-  background: transparent;
-  border-color: transparent;
-  color: var(--ink-soft);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-}
-
-.calc-btn.reset-btn:active {
-  color: var(--ink);
 }
 
 .calc-btn.number-btn {
