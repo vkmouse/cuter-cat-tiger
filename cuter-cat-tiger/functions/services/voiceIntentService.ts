@@ -6,7 +6,7 @@ import type { Env } from '../types.js'
 
 const OPENROUTER_TIMEOUT_MS = 10_000
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const AI_RETRY_COUNT = 2
+const AI_RETRY_COUNT = 1
 
 type FeedingType = 'water' | 'food'
 type VoiceAction = 'start_water' | 'start_food' | 'complete_water' | 'complete_food' | 'unclear'
