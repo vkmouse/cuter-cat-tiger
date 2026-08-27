@@ -3,13 +3,13 @@ import { computed, ref, watch } from 'vue'
 import type { FeedingSession } from '../../types'
 import BaseSheet from '../ui/BaseSheet.vue'
 import CalculatorPad from './CalculatorPad.vue'
-import AmountNoteBar from './AmountNoteBar.vue'
 import { getQuickNotes } from '../../composables/useQuickNotes'
 
 /**
  * 先給後測流程 step 1：只記下「給了多少」，建立/編輯一筆 FeedingSession。
  * 從 RecordFormSheet 拆出來（原本用內部 action state 切換），
- * 拆開後跟一般紀錄完全獨立：沒有時間、沒有 litter 分支；備註欄位沿用一般紀錄的樣式，跟數量並排顯示。
+ * 拆開後跟一般紀錄完全獨立：沒有時間、沒有 litter 分支；備註跟數量現在都收在 CalculatorPad
+ * 同一塊「輸入工作區」裡，跟 RecordFeedingSheet 共用同一套視覺群組（只是沒有 #datetime slot）。
  * 量一律要求 > 0（先給後測不會有「這次給了 0」的情境）。
  *
  * 新增模式下畫面頂端仍保留跟「記錄」切換的 pill：
@@ -71,10 +71,6 @@ const title = computed(() => {
 
 const amountUnit = computed(() => (props.type === 'water' ? 'ml' : 'g'))
 
-function applyQuickNote(text: string) {
-  note.value = text
-}
-
 function handleSubmit() {
   const n = parseFloat(amount.value)
   if (Number.isNaN(n) || n <= 0) return
@@ -94,30 +90,19 @@ function handleSubmit() {
         </button>
       </div>
 
-      <AmountNoteBar :type="type" :amount="amount" :unit="amountUnit" :note="note" @update:note="note = $event" />
-
-      <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: type === 'food' }">
-        <button
-          v-for="text in quickNotes"
-          :key="text"
-          type="button"
-          class="pill"
-          :class="{ active: note === text }"
-          @click="applyQuickNote(text)"
-        >
-          {{ text }}
-        </button>
-      </div>
-
       <CalculatorPad
         :key="formInstanceKey"
         v-model="amount"
+        v-model:note="note"
         :type="type"
         :unit="amountUnit"
         :saving="saving"
         require-positive
+        :quick-notes="quickNotes"
       />
+    </form>
 
+    <template #actions>
       <div class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
         <button
@@ -130,6 +115,6 @@ function handleSubmit() {
           {{ saving ? '儲存中…' : '儲存' }}
         </button>
       </div>
-    </form>
+    </template>
   </BaseSheet>
 </template>

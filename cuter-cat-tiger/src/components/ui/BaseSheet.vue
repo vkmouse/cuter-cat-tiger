@@ -40,5 +40,8 @@ const panelStateClass = computed(() => ({
     <div class="sheet-content">
       <slot />
     </div>
+    <div v-if="$slots.actions" class="sheet-actions-fixed">
+      <slot name="actions" />
+    </div>
   </div>
 </template>

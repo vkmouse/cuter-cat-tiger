@@ -31,10 +31,12 @@ const meta = {
         <p style="font-size:0.88rem;color:var(--ink-soft);margin:0 0 18px;">
           這裡放各個 Sheet 自己的表單或內容（透過 default slot）。
         </p>
-        <div class="sheet-actions">
-          <button type="button" class="btn ghost" @click="args.cancel">取消</button>
-          <button type="button" class="btn primary">確定</button>
-        </div>
+        <template #actions>
+          <div class="sheet-actions">
+            <button type="button" class="btn ghost" @click="args.cancel">取消</button>
+            <button type="button" class="btn primary">確定</button>
+          </div>
+        </template>
       </BaseSheet>
     `,
   }),
@@ -73,9 +75,16 @@ export const MobileLongContent: Story = {
       <BaseSheet v-bind="args">
         <div style="display:grid;gap:14px;">
           <p v-for="i in 10" :key="i" style="margin:0;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--paper);">
-            長內容第 {{ i }} 段：在手機上，Sheet 內容會維持標題可見，只有內容區需要垂直滑動。
+            長內容第 {{ i }} 段：在手機上，Sheet 內容會維持標題可見，只有內容區（.sheet-content）需要垂直滑動；
+            透過 #actions slot 傳入的「取消／確定」永遠固定在 Sheet 最底部，不會被推到捲動內容下面。
           </p>
         </div>
+        <template #actions>
+          <div class="sheet-actions">
+            <button type="button" class="btn ghost">取消</button>
+            <button type="button" class="btn primary">確定</button>
+          </div>
+        </template>
       </BaseSheet>
     `,
   }),

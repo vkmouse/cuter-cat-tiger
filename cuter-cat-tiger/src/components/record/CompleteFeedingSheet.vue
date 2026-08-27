@@ -7,7 +7,13 @@ import { getQuickNotes } from '../../composables/useQuickNotes'
 import BaseSheet from '../ui/BaseSheet.vue'
 import CalculatorPad from './CalculatorPad.vue'
 import DateTimePicker from './DateTimePicker.vue'
-import AmountNoteBar from './AmountNoteBar.vue'
+
+/**
+ * 先給後測流程 step 2：量測剩下多少，算出這次實際吃/喝了多少。
+ * 跟 Record/StartFeedingSheet 用同一套「輸入工作區」視覺（CalculatorPad），額外多了
+ * 「給予量」這一行（唯讀，透過 #given-amount slot 傳入），讓使用者不用回頭確認給了多少。
+ * 剩餘量 > 給予量目前仍然允許送出（刻意設計：量測難免有誤差，不因此擋住使用者存檔）。
+ */
 
 const props = defineProps<{
   open: boolean
@@ -40,10 +46,6 @@ watch(
   { immediate: true },
 )
 
-function applyQuickNote(text: string) {
-  note.value = text
-}
-
 const TYPE_LABEL: Record<'water' | 'food', string> = { water: '喝水', food: '飼料' }
 
 const title = computed(() => `完成量測 · ${props.catName}${props.session ? ` ${TYPE_LABEL[props.session.type]}` : ''}`)
@@ -72,34 +74,19 @@ function handleConfirm() {
 <template>
   <BaseSheet :open="open" :title="title" panel-class="sheet-panel--full" @cancel="emit('cancel')">
     <template v-if="session">
-      <AmountNoteBar
-        :type="session.type"
-        :amount="remaining"
-        :unit="amountUnit"
-        :note="note"
-        @update:note="note = $event"
-      />
-
-      <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: session.type === 'food' }">
-        <button
-          v-for="text in quickNotes"
-          :key="text"
-          type="button"
-          class="pill"
-          :class="{ active: note === text }"
-          @click="applyQuickNote(text)"
-        >
-          {{ text }}
-        </button>
-      </div>
-
       <CalculatorPad
         :key="formInstanceKey"
         v-model="remaining"
+        v-model:note="note"
         :type="session.type"
         :unit="amountUnit"
         :saving="saving"
+        :quick-notes="quickNotes"
       >
+        <template #given-amount>
+          <span class="given-amount-label">給予量</span>
+          <span class="given-amount-value">{{ round1(givenAmount) }} {{ amountUnit }}</span>
+        </template>
         <template #datetime>
           <DateTimePicker :key="formInstanceKey" v-model="timeValue" />
         </template>
@@ -107,8 +94,10 @@ function handleConfirm() {
       <p v-if="consumedPreview !== null" class="consumed-preview" :class="{ negative: consumedPreview < 0 }">
         {{ consumedPreview < 0 ? '剩的比給的多，等於這次沒有淨消耗' : `這次吃了／喝了約 ${consumedPreview} ${amountUnit}` }}
       </p>
+    </template>
 
-      <div class="sheet-actions">
+    <template #actions>
+      <div v-if="session" class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
         <button
           type="button"

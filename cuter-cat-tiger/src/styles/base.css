@@ -129,7 +129,21 @@ button {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(26px + env(safe-area-inset-bottom));
+  padding-bottom: var(--space-4);
+}
+
+/* 固定在 Sheet 最底部、不隨內容捲動的「取消／儲存」區域，透過 BaseSheet 的 #actions slot 傳入。
+   放在 .sheet-content 之後、同一個 flex column 裡，靠 flex-shrink 讓 .sheet-content 自動讓出空間，
+   不需要額外的 position: fixed。 */
+.sheet-actions-fixed {
+  flex: 0 0 auto;
+  padding-top: var(--space-3);
+  padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+}
+
+.sheet-actions-fixed .sheet-actions {
+  margin-top: 0;
 }
 
 .sheet-actions {

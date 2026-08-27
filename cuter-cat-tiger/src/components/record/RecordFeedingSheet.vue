@@ -6,13 +6,15 @@ import { getQuickNotes } from '../../composables/useQuickNotes'
 import BaseSheet from '../ui/BaseSheet.vue'
 import CalculatorPad from './CalculatorPad.vue'
 import DateTimePicker from './DateTimePicker.vue'
-import AmountNoteBar from './AmountNoteBar.vue'
 
 /**
  * 記錄喝水/飼料的單次量測 + 編輯，從 RecordFormSheet 拆出來。
  * 尿尿/大便已改用 RecordLitterFormSheet，這裡不再需要 litter 分支。
  * 新增模式下保留可以切去「開始餵」的 pill，emit switch-to-feeding(amount) 把目前
  * 輸入的量帶出去，實際換開哪個 sheet 交給呼叫端決定。
+ *
+ * 日期、數量+備註、快速備註、鍵盤現在是同一個視覺群組，全部收在 CalculatorPad 裡
+ * （日期時間透過 #datetime slot 傳入，狀態仍留在這個 Sheet 管理）。
  */
 
 const props = defineProps<{
@@ -61,10 +63,6 @@ watch(
   { immediate: true },
 )
 
-function applyQuickNote(text: string) {
-  note.value = text
-}
-
 const TYPE_ACTION_LABEL: Record<'water' | 'food', string> = {
   water: '記錄喝水',
   food: '記錄飼料',
@@ -102,34 +100,23 @@ function handleSubmit() {
         </button>
       </div>
 
-      <AmountNoteBar :type="type" :amount="amount" :unit="amountUnit" :note="note" @update:note="note = $event" />
-
-      <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: type === 'food' }">
-        <button
-          v-for="text in quickNotes"
-          :key="text"
-          type="button"
-          class="pill"
-          :class="{ active: note === text }"
-          @click="applyQuickNote(text)"
-        >
-          {{ text }}
-        </button>
-      </div>
-
       <CalculatorPad
         :key="formInstanceKey"
         v-model="amount"
+        v-model:note="note"
         :type="type"
         :unit="amountUnit"
         :saving="saving"
         :require-positive="mode === 'add'"
+        :quick-notes="quickNotes"
       >
         <template #datetime>
           <DateTimePicker :key="formInstanceKey" v-model="timeValue" />
         </template>
       </CalculatorPad>
+    </form>
 
+    <template #actions>
       <div class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
         <button
@@ -142,6 +129,6 @@ function handleSubmit() {
           {{ saving ? '儲存中…' : '儲存' }}
         </button>
       </div>
-    </form>
+    </template>
   </BaseSheet>
 </template>

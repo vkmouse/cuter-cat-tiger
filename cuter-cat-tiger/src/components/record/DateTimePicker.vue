@@ -8,7 +8,7 @@
  * modelValue 沿用 utils/date.ts 的 datetime-local 字串格式（'YYYY-MM-DDTHH:mm'，UTC+8 的牆上時鐘時間，
  * 不帶時區資訊），跟原本 RecordFormSheet（現拆為 RecordFeedingSheet/RecordLitterFormSheet）內部 timeValue 的格式完全一致，呼叫端不需要額外轉換。
  */
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useId, watch } from 'vue'
 import { WEEKDAY_LABELS, weekdayLabel, nowDateTimeLocalValue, todayDateKey } from '../../utils/date'
 import ExpandableField from '../ui/ExpandableField.vue'
 
@@ -21,6 +21,9 @@ const emit = defineEmits<{
 }>()
 
 const expanded = ref(false)
+// 多個 Sheet（Record/Complete）可能同時 mount 各自的 DateTimePicker，固定的 id="fCalendarTime"
+// 會在 DOM 裡重複，label 的 for 屬性會綁到錯的 input。改用 useId() 讓每個實例拿到唯一 id。
+const timeInputId = useId()
 
 function splitValue(value: string): { dateKey: string; time: string } {
   const v = value || nowDateTimeLocalValue()
@@ -195,8 +198,8 @@ const summaryLabel = computed(() => {
     </div>
 
     <div class="time-row">
-      <label for="fCalendarTime">時間</label>
-      <input id="fCalendarTime" type="time" :value="timeValue" @input="handleTimeInput" />
+      <label :for="timeInputId">時間</label>
+      <input :id="timeInputId" type="time" :value="timeValue" @input="handleTimeInput" />
     </div>
   </ExpandableField>
 </template>

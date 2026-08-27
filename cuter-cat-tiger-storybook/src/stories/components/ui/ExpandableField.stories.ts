@@ -25,8 +25,9 @@ const meta = {
             <span style="font-weight:600;">點我展開／摺疊</span>
           </template>
           <p style="margin:0;font-size:0.85rem;color:var(--ink-soft);">
-            這裡放展開後才顯示的內容，DateTimePicker（日曆＋時間）跟 RecordFeedingSheet 裡的
-            CalculatorPad 都是用這個元件包起來，維持一致的收合互動與樣式。
+            這裡放展開後才顯示的內容。DateTimePicker（日曆＋時間）是用這個元件包起來的，
+            再透過 CalculatorPad 的 #datetime slot 顯示在計算機底盤裡；CalculatorPad 本身不再
+            用 ExpandableField 包起來（現在整塊面板都固定展開）。
           </p>
         </ExpandableField>
       </div>

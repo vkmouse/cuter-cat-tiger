@@ -2,35 +2,43 @@
 import { computed, ref, watch } from 'vue'
 
 /**
- * 簡化版 CalculatorPad（pending operator 狀態機）：
- * - 只保留加減、AC、0～9，拿掉乘除、小數點、退格、00（記錄的量用不到）
- * - 按運算符號（+ −）進入 pending 狀態，畫面顯示第一個運算元 + 運算符提示
- * - 再輸入第二個數字後，按鍵顯示「=」，可以按下去計算並套用結果
- * - 沒有 pending 狀態時，同一顆鍵顯示「確定」，但這顆鍵本質上就是「=」——
- *   沒有算式可以算的時候，「確定」只是「=」的 disabled 狀態，不做任何事，
- *   實際存檔仍由外層表單最下方的「儲存」按鈕負責。
- * - 多加了「結果為負數要擋下來」的規則（cat app 的數量不能是負的）
+ * 「輸入工作區」整塊面板：原本的 CalculatorPad（純鍵盤）+ AmountNoteBar（數量＋備註）+
+ * 快速備註 pill 列，現在都收在同一個 --paper-dark 底盤裡，對齊參考圖「日期 → 數量/備註 →
+ * 快速備註 → 鍵盤」是同一個視覺群組的方向。AmountNoteBar 已經沒有獨立存在的理由（拿掉圖示後
+ * 只剩下純粹的一列，且只有這裡會用到）所以直接併進來，不再是獨立元件。
  *
- * datetime slot：CalculatorPad 只負責在按鍵上方「呈現」一塊日期時間 pill 的位置，
- * 實際的日期時間狀態與互動邏輯仍由外層 Sheet 管理（透過 <DateTimePicker v-model="..."> 傳進 slot），
- * 不傳這個 slot 就完全不顯示這塊區域（例如 StartFeedingSheet 沒有時間欄位）。
+ * pending operator 狀態機（沿用）：
+ * - 只保留加減、AC、0～9，拿掉乘除、小數點、退格、00（記錄的量用不到）
+ * - 按運算符號（+ −）進入 pending 狀態，上方小字顯示第一個運算元 + 運算符提示
+ * - 再輸入第二個數字後，按鍵顯示「=」且可以按
+ * - 「確定」／「=」本質上是同一顆鍵：只要不是「有算式、且已經輸入第二個數字」的狀態，
+ *   一律 disabled——按 10（還沒有運算子）disabled；按 10 + （還沒有第二個數字）也 disabled；
+ *   10 + 1 才 enabled。不再有「按下去單純摺疊」的行為。
+ * - 結果為負數要擋下來（cat app 的數量不能是負的）
+ *
+ * given-amount / datetime slot：兩者都只負責「呈現」，狀態與互動邏輯留在外層 Sheet，
+ * 不傳就完全不顯示那個區塊（例如 StartFeedingSheet 沒有時間、Record/Start 都沒有已給量）。
  */
 
 const props = withDefaults(
   defineProps<{
     modelValue: string
+    note: string
     type: 'water' | 'food'
     unit: string
     saving?: boolean
+    quickNotes?: string[]
+    notePlaceholder?: string
     // 新增紀錄／開始餵食（給的量）要求必須 > 0；量測「剩下多少」時 0 是合法值，不能套用同一條規則，
     // 由呼叫端依情境決定要不要開啟。
     requirePositive?: boolean
   }>(),
-  { saving: false, requirePositive: false },
+  { saving: false, requirePositive: false, quickNotes: () => [], notePlaceholder: '在此輸入備註' },
 )
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
+  (e: 'update:note', value: string): void
 }>()
 
 const amount = computed({
@@ -57,9 +65,9 @@ watch(
 
 // 跟 JaNote 一樣：pending 狀態下顯示「=」，否則顯示「確定」
 const confirmLabel = computed(() => (pendingOperator.value ? '=' : '確定'))
-// 這顆鍵本質上是「=」：只有存在可以計算的算式（有 pending 運算子）時才能按，
-// 顯示「確定」的狀態就是「=」的 disabled 狀態，不做任何事。
-const confirmEnabled = computed(() => !!pendingOperator.value && !props.saving)
+// 這顆鍵本質上是「=」：唯有存在「運算子 + 已輸入第二個數字」的完整算式時才能按，
+// 其餘情況（沒有運算子；有運算子但還沒輸入第二個數字）一律 disabled。
+const confirmEnabled = computed(() => !!pendingOperator.value && hasSecondInput.value && !props.saving)
 
 function clearPending() {
   pendingOperator.value = null
@@ -103,16 +111,8 @@ function applyCalculation(): boolean {
 }
 
 function handleConfirmClick() {
-  // 沒有 pending 算式時這顆鍵是 disabled 的「確定」，不會走到這裡；保留這個檢查只是防呆。
-  if (props.saving || !confirmEnabled.value) return
-
-  if (!hasSecondInput.value) {
-    // pending 狀態但尚未輸入第二個數字：清除 pending，還原成第一個運算元
-    clearPending()
-    return
-  }
-
-  // pending 狀態且有第二個數字：計算並套用結果
+  // disabled 狀態下不會走到這裡；保留這個檢查只是防呆。
+  if (!confirmEnabled.value) return
   applyCalculation()
 }
 
@@ -168,6 +168,15 @@ function handleKey(key: string) {
   amount.value = amount.value === '0' ? key : amount.value + key
 }
 
+function handleNoteInput(e: Event) {
+  emit('update:note', (e.target as HTMLInputElement).value)
+}
+
+function selectQuickNote(text: string) {
+  // 定案：快速備註是「取代」，不是「附加」。
+  emit('update:note', text)
+}
+
 interface CalcKey {
   key: string
   kind: 'num' | 'op'
@@ -188,14 +197,44 @@ function handleKeyClick(key: string) {
 
 <template>
   <div class="calc-wrap" :class="type">
+    <div v-if="$slots['given-amount']" class="calc-given-amount">
+      <slot name="given-amount" />
+    </div>
+
     <div v-if="$slots.datetime" class="calc-datetime">
       <slot name="datetime" />
     </div>
-    <div class="calc-display">
-      <div class="pending-op">{{ pendingOperator ? `${firstOperand} ${pendingOperator}` : '\u00a0' }}</div>
-      <div class="calc-value">{{ amount || '0' }}<span class="calc-unit"> {{ unit }}</span></div>
+
+    <div class="calc-pending-op">{{ pendingOperator ? `${firstOperand} ${pendingOperator}` : '\u00a0' }}</div>
+
+    <div class="calc-amount-note">
+      <span class="calc-amount-value">{{ amount || '0' }}<span class="calc-amount-unit"> {{ unit }}</span></span>
+      <span class="calc-amount-divider" aria-hidden="true"></span>
+      <input
+        class="calc-note-input"
+        type="text"
+        :value="note"
+        :placeholder="notePlaceholder"
+        aria-label="備註"
+        @input="handleNoteInput"
+      />
     </div>
+
     <p v-if="errorMsg" class="calc-error">{{ errorMsg }}</p>
+
+    <div v-if="quickNotes.length" class="pill-group calc-quick-notes" :class="{ food: type === 'food' }">
+      <button
+        v-for="text in quickNotes"
+        :key="text"
+        type="button"
+        class="pill"
+        :class="{ active: note === text }"
+        @click="selectQuickNote(text)"
+      >
+        {{ text }}
+      </button>
+    </div>
+
     <div class="calc-keys">
       <button
         v-for="k in GRID_KEYS"
@@ -219,7 +258,7 @@ function handleKeyClick(key: string) {
       <button
         type="button"
         class="calc-btn confirm-btn"
-        :disabled="saving || !confirmEnabled"
+        :disabled="!confirmEnabled"
         @click="handleConfirmClick"
       >
         {{ confirmLabel }}
@@ -232,9 +271,8 @@ function handleKeyClick(key: string) {
 .calc-wrap.water { --calc-accent: var(--water); --calc-accent-soft: var(--water-soft); }
 .calc-wrap.food { --calc-accent: var(--food); --calc-accent-soft: var(--food-soft); }
 
-/* 整個計算機是「一塊底盤」：display 跟按鍵不再是兩個各自畫框的卡片，
-   而是同一個 --paper-dark 底盤裡，數字顯示區用留白＋字重跟按鍵區分，按鍵則用
-   微陰影（非邊框）浮起來，像實體計算機的一體成形外殼。 */
+/* 整個「輸入工作區」是一塊底盤：日期、數量/備註、快速備註、鍵盤全部在同一個 --paper-dark
+   面板裡，用留白＋卡片/pill 的深淺區分彼此，而不是各自獨立的區塊。 */
 .calc-wrap {
   background: var(--paper-dark);
   border-radius: var(--radius-lg);
@@ -242,9 +280,29 @@ function handleKeyClick(key: string) {
   margin-bottom: var(--space-4);
 }
 
-/* 日期時間 pill：CalculatorPad 只提供「一塊白色圓角列」的外觀，內容（DateTimePicker）
-   由外層 Sheet 透過 slot 傳進來，展開/收合等互動邏輯完全在 DateTimePicker／ExpandableField 裡，
-   這裡只用 :deep() 覆寫視覺，讓它在深色底盤上呈現跟參考圖一致的白色 pill。 */
+/* 已給量：純呈現用的一行文字（label + value），只有 CompleteFeedingSheet 會傳這個 slot 進來。 */
+.calc-given-amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  padding: 0 2px;
+  font-size: 0.85rem;
+}
+
+.calc-given-amount :deep(.given-amount-label) {
+  color: var(--ink-soft);
+}
+
+.calc-given-amount :deep(.given-amount-value) {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* 日期時間 pill：這裡只提供「一塊白色圓角列」的外觀，內容（DateTimePicker）由外層 Sheet
+   透過 slot 傳進來，展開/收合等互動邏輯完全在 DateTimePicker／ExpandableField 裡，
+   這裡只用 :deep() 覆寫視覺，讓它在深色底盤上呈現白色 pill。 */
 .calc-datetime {
   margin-bottom: var(--space-3);
 }
@@ -268,38 +326,85 @@ function handleKeyClick(key: string) {
   background: var(--paper);
 }
 
-.calc-display {
-  padding: var(--space-2) var(--space-2) var(--space-3);
-  text-align: right;
-}
-
-.pending-op {
+.calc-pending-op {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--ink-soft);
+  text-align: right;
   min-height: 1em;
+  margin: 0 2px 4px;
 }
 
-.calc-value {
+/* 數量＋備註：白色圓角列，取代原本各自的「數量」「備註」兩個 field。
+   數量本身不可編輯（純顯示，實際輸入交給下方鍵盤），備註是可輸入的 input。
+   拿掉圖示：Sheet 標題與上方 toggle 已經表達了水/飼料，這裡不用再放一次。 */
+.calc-amount-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: var(--shadow-raised-active);
+}
+
+.calc-amount-value {
+  flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: 1.9rem;
   font-weight: 600;
-  color: var(--calc-accent);
-  line-height: 1.2;
-  word-break: break-all;
+  font-size: 1rem;
+  color: var(--ink);
 }
 
-.calc-unit {
-  font-size: 0.85rem;
+.calc-amount-unit {
+  font-size: 0.8rem;
   font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.calc-amount-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+  flex-shrink: 0;
+}
+
+.calc-note-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--ink);
+  padding: 0;
+}
+
+.calc-note-input::placeholder {
+  color: var(--ink-soft);
+}
+
+.calc-note-input:focus {
+  outline: none;
 }
 
 .calc-error {
   margin: 0 0 8px;
-  padding: 0 var(--space-2);
+  padding: 0 2px;
   font-size: 0.78rem;
   color: #b3452f;
   text-align: right;
+}
+
+/* 快速備註現在放進計算機底盤裡，pill 預設底色（--paper-dark）跟底盤同色會糊在一起，
+   所以在這裡覆寫成跟數字鍵一樣的白色，靠深淺差異跟底盤區分。 */
+.calc-quick-notes {
+  margin-bottom: var(--space-3);
+}
+
+.calc-quick-notes .pill {
+  background: var(--card);
 }
 
 /* 4 欄 grid：3x3 數字 + 每列一顆功能鍵，最後一列 0（佔 3 格）+ =/確定 */
