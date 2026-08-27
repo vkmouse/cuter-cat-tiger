@@ -29,7 +29,7 @@ const amountLabel = computed(() => `${round1(props.session.givenAmount)} ${props
         <span class="session-amount">已給 {{ amountLabel }}</span>
         <span class="session-since">{{ sinceLabel }}</span>
       </div>
-      <div class="session-hint">還沒量測剩下多少</div>
+      <div v-if="session.note" class="session-note">{{ session.note }}</div>
     </div>
     <div class="session-actions">
       <button type="button" class="icon-btn" aria-label="修改給的量" @click="emit('edit', session)">
@@ -107,9 +107,13 @@ const amountLabel = computed(() => `${round1(props.session.givenAmount)} ${props
   color: var(--ink-soft);
 }
 
-.session-hint {
-  font-size: 0.76rem;
+.session-note {
+  font-size: 0.8rem;
   color: var(--ink-soft);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin-top: 1px;
 }
 
