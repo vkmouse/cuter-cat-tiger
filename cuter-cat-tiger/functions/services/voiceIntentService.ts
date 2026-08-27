@@ -4,8 +4,9 @@ import type { FeedingSessionWithCatNameRow } from '../repositories/feedingSessio
 import { ApiError, parseJsonBody, requireNonEmptyString } from '../utils/validation.js'
 import type { Env } from '../types.js'
 
-const OPENROUTER_TIMEOUT_MS = 15_000
+const OPENROUTER_TIMEOUT_MS = 10_000
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+const AI_RETRY_COUNT = 2
 
 type FeedingType = 'water' | 'food'
 type VoiceAction = 'start_water' | 'start_food' | 'complete_water' | 'complete_food' | 'unclear'
@@ -107,37 +108,16 @@ async function callOpenRouterOnce(
   }
 }
 
-/** 逾時或回傳非合法 JSON 時重試一次，仍失敗就視為 AI provider 錯誤。 */
-async function parseIntentWithOpenRouter(prompt: string, env: Env): Promise<VoiceIntentAiOutput> {
-  if (!env.OPENROUTER_API_KEY || !env.OPENROUTER_MODEL) {
-    throw new ApiError(500, 'OPENROUTER_API_KEY / OPENROUTER_MODEL 未設定')
-  }
-  try {
-    return await callOpenRouterOnce(prompt, env.OPENROUTER_API_KEY, env.OPENROUTER_MODEL)
-  } catch {
-    try {
-      return await callOpenRouterOnce(prompt, env.OPENROUTER_API_KEY, env.OPENROUTER_MODEL)
-    } catch (err) {
-      throw new ApiError(502, `AI 服務呼叫失敗：${err instanceof Error ? err.message : String(err)}`)
-    }
-  }
-}
-
 function fail(reason: string): VoiceIntentResult {
   return { ok: false, reason }
 }
 
-export async function resolveVoiceIntent(env: Env, request: Request): Promise<VoiceIntentResult> {
-  const db = env.DB
-  const body = await parseJsonBody(request)
-  const rawText = requireNonEmptyString(body.rawText, 'rawText')
-
-  const cats = await catRepository.listCats(db)
-  const sessions = await feedingSessionRepository.listAllFeedingSessions(db)
-
-  const intent = await parseIntentWithOpenRouter(buildPrompt(rawText, cats, sessions), env)
-
-  // 檢查順序沿用規格書表格：action → 貓咪 → 數量(start) → 候選紀錄存在(complete) → 紀錄選擇有效(complete) → 剩餘量(complete)
+/** 檢查順序沿用規格書表格：action → 貓咪 → 數量(start) → 候選紀錄存在(complete) → 紀錄選擇有效(complete) → 剩餘量(complete) */
+function validateIntent(
+  intent: VoiceIntentAiOutput,
+  cats: { id: number; name: string }[],
+  sessions: FeedingSessionWithCatNameRow[],
+): VoiceIntentResult {
   if (
     intent.action !== 'start_water' &&
     intent.action !== 'start_food' &&
@@ -201,4 +181,60 @@ export async function resolveVoiceIntent(env: Env, request: Request): Promise<Vo
       body: { remainingAmount },
     },
   }
+}
+
+/**
+ * 呼叫 AI 並檢核結果；不論是逾時／呼叫失敗，或是檢核失敗，都重新呼叫 AI，
+ * 最多重試 AI_RETRY_COUNT 次（總呼叫次數為 1 + AI_RETRY_COUNT）。
+ * 重試次數用盡後，若是呼叫失敗則拋出 ApiError，若是檢核失敗則回傳最後一次的失敗結果。
+ */
+async function resolveIntentWithRetry(
+  prompt: string,
+  env: Env,
+  cats: { id: number; name: string }[],
+  sessions: FeedingSessionWithCatNameRow[],
+): Promise<VoiceIntentResult> {
+  if (!env.OPENROUTER_API_KEY || !env.OPENROUTER_MODEL) {
+    throw new ApiError(500, 'OPENROUTER_API_KEY / OPENROUTER_MODEL 未設定')
+  }
+
+  let lastValidationFailure: VoiceIntentResult | null = null
+
+  for (let attempt = 0; attempt <= AI_RETRY_COUNT; attempt++) {
+    const isLastAttempt = attempt === AI_RETRY_COUNT
+
+    let intent: VoiceIntentAiOutput
+    try {
+      intent = await callOpenRouterOnce(prompt, env.OPENROUTER_API_KEY, env.OPENROUTER_MODEL)
+    } catch (err) {
+      if (isLastAttempt) {
+        throw new ApiError(502, `AI 服務呼叫失敗：${err instanceof Error ? err.message : String(err)}`)
+      }
+      continue
+    }
+
+    const result = validateIntent(intent, cats, sessions)
+    if (result.ok) {
+      return result
+    }
+
+    lastValidationFailure = result
+    if (isLastAttempt) {
+      return result
+    }
+  }
+
+  // 理論上不會走到這裡（迴圈內一定會 return 或 throw），保留作為型別安全的保底。
+  return lastValidationFailure ?? fail('沒聽懂這句話在說什麼')
+}
+
+export async function resolveVoiceIntent(env: Env, request: Request): Promise<VoiceIntentResult> {
+  const db = env.DB
+  const body = await parseJsonBody(request)
+  const rawText = requireNonEmptyString(body.rawText, 'rawText')
+
+  const cats = await catRepository.listCats(db)
+  const sessions = await feedingSessionRepository.listAllFeedingSessions(db)
+
+  return resolveIntentWithRetry(buildPrompt(rawText, cats, sessions), env, cats, sessions)
 }
