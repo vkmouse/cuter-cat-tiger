@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 
-import RecordFormSheet from '../../../../../cuter-cat-tiger/src/components/record/RecordFormSheet.vue'
+import RecordFeedingSheet from '../../../../../cuter-cat-tiger/src/components/record/RecordFeedingSheet.vue'
 import type { CatRecord } from '../../../../../cuter-cat-tiger/src/types'
 
 function makeRecord(overrides: Partial<CatRecord>): CatRecord {
@@ -18,8 +18,8 @@ function makeRecord(overrides: Partial<CatRecord>): CatRecord {
 }
 
 const meta = {
-  title: 'Record/RecordFormSheet',
-  component: RecordFormSheet,
+  title: 'Record/RecordFeedingSheet',
+  component: RecordFeedingSheet,
   tags: ['autodocs'],
   argTypes: {
     open: {
@@ -33,8 +33,8 @@ const meta = {
     },
     type: {
       control: 'radio',
-      options: ['water', 'food', 'pee', 'poop'],
-      description: 'water/food 新增模式下會顯示可切去 StartFeedingSheet 的 pill；pee/poop 只有一般紀錄。',
+      options: ['water', 'food'],
+      description: '新增模式下會顯示可切去 StartFeedingSheet 的 pill。',
     },
     catName: {
       control: 'text',
@@ -56,7 +56,7 @@ const meta = {
     save: { action: 'save' },
     'switch-to-feeding': { action: 'switch-to-feeding' },
   },
-} satisfies Meta<typeof RecordFormSheet>
+} satisfies Meta<typeof RecordFeedingSheet>
 
 export default meta
 
@@ -76,24 +76,6 @@ export const AddFood: Story = {
     open: true,
     mode: 'add',
     type: 'food',
-    catName: '橘子',
-  },
-}
-
-export const AddPee: Story = {
-  args: {
-    open: true,
-    mode: 'add',
-    type: 'pee',
-    catName: '橘子',
-  },
-}
-
-export const AddPoop: Story = {
-  args: {
-    open: true,
-    mode: 'add',
-    type: 'poop',
     catName: '橘子',
   },
 }

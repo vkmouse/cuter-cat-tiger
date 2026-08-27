@@ -142,7 +142,7 @@ function handleConfirm() {
 }
 
 .quick-notes {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .consumed-preview {
@@ -159,8 +159,8 @@ function handleConfirm() {
 .amount-note-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .amount-note-row .field {
@@ -173,10 +173,11 @@ function handleConfirm() {
   font-family: var(--font-mono);
   font-weight: 600;
   font-size: 1.05rem;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
   background: var(--paper);
+  box-shadow: var(--shadow-raised-active);
   color: var(--ink);
   text-align: right;
 }

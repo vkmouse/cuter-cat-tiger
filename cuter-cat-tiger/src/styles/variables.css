@@ -15,8 +15,25 @@
   /* 「今日總覽」目標值達標時的訊號色，跟 water/food/litter 主色區隔開。 */
   --good: #4B7A4E;
   --good-soft: #E1EBDD;
-  --radius-lg: 18px;
-  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --radius-pill: 999px;
+
+  /* 間距尺度：取代原本各元件各自手調的 8/12/14/18px，統一垂直節奏。 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  /* 用陰影／色塊層次取代邊框來分區，是「無段落感」設計的核心手段：
+     surface-sunken 用於容器內凹的分區（例如金額顯示、鍵盤底盤），
+     surface-raised 用於可點按的元件（鍵盤按鍵、輸入框），靠極淺的陰影營造厚度感而非描邊。 */
+  --shadow-raised: 0 1px 2px rgba(38, 48, 42, 0.07), 0 1px 1px rgba(38, 48, 42, 0.04);
+  --shadow-raised-active: inset 0 1px 3px rgba(38, 48, 42, 0.12);
+  --shadow-sheet: 0 -12px 34px rgba(38, 48, 42, 0.22);
+  --shadow-floating: 0 6px 20px rgba(38, 48, 42, 0.14);
 
   /* Bottom sheet 兩段固定高度：所有 sheet 依內容量歸類到其中一段，
      讓面板頂邊在同一層級間保持一致，不再隨內容多寡浮動。 */

@@ -8,7 +8,7 @@ import { computed, ref, watch } from 'vue'
  * - 再輸入第二個數字後，按鍵顯示「=」，只計算並套用結果
  * - 沒有 pending 狀態時，同一顆鍵顯示「確定」
  *   1. 「確定」不是真的送出表單，只是 emit 'collapse' 事件；
- *      三個表單（RecordFormSheet／StartFeedingSheet／CompleteFeedingSheet）現在都固定展開計算機、
+ *      三個表單（RecordFeedingSheet／StartFeedingSheet／CompleteFeedingSheet）現在都固定展開計算機、
  *      不再用 ExpandableField 包起來，所以目前呼叫端接到這個事件都是 no-op，
  *      實際存檔仍由外層表單最下方的「儲存」按鈕負責
  *   2. 多加了「結果為負數要擋下來」的規則（cat app 的數量不能是負的）
@@ -234,12 +234,17 @@ function handleKeyClick(key: string) {
 .calc-wrap.water { --calc-accent: var(--water); --calc-accent-soft: var(--water-soft); }
 .calc-wrap.food { --calc-accent: var(--food); --calc-accent-soft: var(--food-soft); }
 
+/* 整個計算機是「一塊底盤」：display 跟按鍵不再是兩個各自畫框的卡片，
+   而是同一個 --paper-dark 底盤裡，數字顯示區用留白＋字重跟按鍵區分，按鍵則用
+   微陰影（非邊框）浮起來，像實體計算機的一體成形外殼。 */
+.calc-wrap {
+  background: var(--paper-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+}
+
 .calc-display {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 6px;
+  padding: var(--space-2) var(--space-2) var(--space-3);
   text-align: right;
 }
 
@@ -252,7 +257,7 @@ function handleKeyClick(key: string) {
 
 .calc-value {
   font-family: var(--font-mono);
-  font-size: 1.6rem;
+  font-size: 1.9rem;
   font-weight: 600;
   color: var(--calc-accent);
   line-height: 1.2;
@@ -265,16 +270,18 @@ function handleKeyClick(key: string) {
 }
 
 .calc-error {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
+  padding: 0 var(--space-2);
   font-size: 0.78rem;
   color: #b3452f;
+  text-align: right;
 }
 
 /* 4 欄 grid：3x3 數字 + 每列一顆功能鍵，最後一列 0（佔 3 格）+ =/確定 */
 .calc-keys {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .zero-btn {
@@ -282,26 +289,28 @@ function handleKeyClick(key: string) {
 }
 
 .calc-btn {
-  padding: 13px 0;
-  border: 1.5px solid var(--line);
-  border-radius: 10px;
+  padding: 15px 0;
+  border: none;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-family: var(--font-heading);
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--ink);
   background: var(--card);
-  transition: transform 0.1s ease;
+  box-shadow: var(--shadow-raised);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .calc-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
+  box-shadow: var(--shadow-raised-active);
 }
 
 .calc-btn.function-btn {
   background: var(--calc-accent-soft);
   color: var(--calc-accent);
-  border-color: var(--calc-accent-soft);
+  box-shadow: none;
 }
 
 .calc-btn.function-btn.operator-active {
@@ -318,14 +327,14 @@ function handleKeyClick(key: string) {
   width: 100%;
   background: var(--calc-accent);
   color: #fff;
-  border-color: var(--calc-accent);
-  padding: 13px 0;
+  box-shadow: none;
+  padding: 15px 0;
 }
 
 .calc-btn.confirm-btn:disabled {
-  background: var(--paper-dark);
+  background: var(--card);
   color: var(--ink-soft);
-  border-color: var(--line);
+  box-shadow: var(--shadow-raised);
   cursor: not-allowed;
 }
 </style>

@@ -85,7 +85,7 @@ export const Food: Story = {
   parameters: {
     docs: {
       description: {
-        story: '飼料類型的強調色改用 --food，跟 RecordFormSheet 的「儲存」按鈕 food 樣式一致。',
+        story: '飼料類型的強調色改用 --food，跟 RecordFeedingSheet 的「儲存」按鈕 food 樣式一致。',
       },
     },
   },

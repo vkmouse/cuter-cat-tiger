@@ -25,7 +25,7 @@ const meta = {
             <span style="font-weight:600;">點我展開／摺疊</span>
           </template>
           <p style="margin:0;font-size:0.85rem;color:var(--ink-soft);">
-            這裡放展開後才顯示的內容，DateTimePicker（日曆＋時間）跟 RecordFormSheet 裡的
+            這裡放展開後才顯示的內容，DateTimePicker（日曆＋時間）跟 RecordFeedingSheet 裡的
             CalculatorPad 都是用這個元件包起來，維持一致的收合互動與樣式。
           </p>
         </ExpandableField>

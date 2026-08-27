@@ -13,7 +13,7 @@ import { getQuickNotes } from '../../composables/useQuickNotes'
  *
  * 新增模式下畫面頂端仍保留跟「記錄」切換的 pill：
  * 這裡不是切內部狀態，而是 emit('switch-to-record', amount) 交給呼叫端關掉這個 sheet、
- * 換開 RecordFormSheet，並把目前輸入的量帶過去延續顯示。
+ * 換開 RecordFeedingSheet，並把目前輸入的量帶過去延續顯示。
  */
 
 const props = withDefaults(
@@ -24,7 +24,7 @@ const props = withDefaults(
     catName: string
     feedingSession?: FeedingSession | null
     saving?: boolean
-    // 從 RecordFormSheet 透過切換 pill 過來時，帶著對方當下輸入的量延續顯示；
+    // 從 RecordFeedingSheet 透過切換 pill 過來時，帶著對方當下輸入的量延續顯示；
     // 只在 mode === 'add' 時採用，edit 模式一律以 feedingSession 本身的量為準。
     initialAmount?: string
   }>(),
@@ -34,7 +34,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   cancel: []
   save: [payload: { amount: number; note: string }]
-  // 帶上目前輸入的量，讓呼叫端可以原封不動延續到 RecordFormSheet。
+  // 帶上目前輸入的量，讓呼叫端可以原封不動延續到 RecordFeedingSheet。
   'switch-to-record': [amount: string]
 }>()
 
@@ -152,28 +152,29 @@ function handleSubmit() {
   display: grid;
   grid-template-columns: 1fr 1fr;
   padding: 4px;
-  margin-bottom: 18px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  margin-bottom: var(--space-5);
+  border-radius: var(--radius-md);
   background: var(--paper);
+  box-shadow: var(--shadow-raised-active);
   gap: 4px;
 }
 
 .action-toggle-option {
   min-height: 40px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink-soft);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .action-toggle-option.active {
   background: var(--card);
   color: var(--ink);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
+  box-shadow: var(--shadow-raised);
 }
 
 .action-toggle-option:disabled {
@@ -181,14 +182,14 @@ function handleSubmit() {
 }
 
 .quick-notes {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .amount-note-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .amount-note-row .field {
@@ -201,10 +202,11 @@ function handleSubmit() {
   font-family: var(--font-mono);
   font-weight: 600;
   font-size: 1.05rem;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
   background: var(--paper);
+  box-shadow: var(--shadow-raised-active);
   color: var(--ink);
   text-align: right;
 }

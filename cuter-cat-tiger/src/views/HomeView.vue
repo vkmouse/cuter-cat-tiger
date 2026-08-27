@@ -7,7 +7,8 @@ import DateNav from '../components/nav/DateNav.vue'
 import DailyStats from '../components/stats/DailyStats.vue'
 import AllCatsStatsSheet from '../components/stats/AllCatsStatsSheet.vue'
 import RecordList from '../components/record/RecordList.vue'
-import RecordFormSheet from '../components/record/RecordFormSheet.vue'
+import RecordFeedingSheet from '../components/record/RecordFeedingSheet.vue'
+import RecordLitterFormSheet from '../components/record/RecordLitterFormSheet.vue'
 import StartFeedingSheet from '../components/record/StartFeedingSheet.vue'
 import PendingFeedingList from '../components/record/PendingFeedingList.vue'
 import CompleteFeedingSheet from '../components/record/CompleteFeedingSheet.vue'
@@ -92,26 +93,38 @@ function handleAllCatsStatsSelectCat(catId: number) {
   closeAllCatsStats()
 }
 
-const recordSheetOpen = ref(false)
-const recordSheetMode = ref<'add' | 'edit'>('add')
-const recordSheetType = ref<RecordType>('water')
-const editingRecord = ref<CatRecord | null>(null)
-// 只在「從 StartFeedingSheet 切換過來」時會帶值，開給 RecordFormSheet 的 :initial-amount 用。
-const recordSheetInitialAmount = ref('')
+const feedingRecordSheetOpen = ref(false)
+const feedingRecordSheetMode = ref<'add' | 'edit'>('add')
+const feedingRecordSheetType = ref<'water' | 'food'>('water')
+const editingFeedingRecord = ref<CatRecord | null>(null)
+// 只在「從 StartFeedingSheet 切換過來」時會帶值，開給 RecordFeedingSheet 的 :initial-amount 用。
+const feedingRecordSheetInitialAmount = ref('')
+
+const litterSheetOpen = ref(false)
+const litterSheetMode = ref<'add' | 'edit'>('add')
+const litterSheetType = ref<'pee' | 'poop'>('pee')
+const editingLitterRecord = ref<CatRecord | null>(null)
 
 const feedingSheetOpen = ref(false)
 const feedingSheetMode = ref<'add' | 'edit'>('add')
 const feedingSheetType = ref<'water' | 'food'>('water')
 const editingFeedingSession = ref<FeedingSession | null>(null)
-// 只在「從 RecordFormSheet 切換過來」時會帶值，開給 StartFeedingSheet 的 :initial-amount 用。
+// 只在「從 RecordFeedingSheet 切換過來」時會帶值，開給 StartFeedingSheet 的 :initial-amount 用。
 const feedingSheetInitialAmount = ref('')
 
-function openAddRecord(type: RecordType, initialAmount = '') {
-  recordSheetMode.value = 'add'
-  recordSheetType.value = type
-  editingRecord.value = null
-  recordSheetInitialAmount.value = initialAmount
-  recordSheetOpen.value = true
+function openAddFeedingRecord(type: 'water' | 'food', initialAmount = '') {
+  feedingRecordSheetMode.value = 'add'
+  feedingRecordSheetType.value = type
+  editingFeedingRecord.value = null
+  feedingRecordSheetInitialAmount.value = initialAmount
+  feedingRecordSheetOpen.value = true
+}
+
+function openAddLitterRecord(type: 'pee' | 'poop') {
+  litterSheetMode.value = 'add'
+  litterSheetType.value = type
+  editingLitterRecord.value = null
+  litterSheetOpen.value = true
 }
 
 function openStartFeedingSession(type: 'water' | 'food', initialAmount = '') {
@@ -122,11 +135,26 @@ function openStartFeedingSession(type: 'water' | 'food', initialAmount = '') {
   feedingSheetOpen.value = true
 }
 
+function openAddRecord(type: RecordType) {
+  if (type === 'water' || type === 'food') {
+    openAddFeedingRecord(type)
+  } else {
+    openAddLitterRecord(type)
+  }
+}
+
 function openEditRecord(record: CatRecord) {
-  recordSheetMode.value = 'edit'
-  recordSheetType.value = record.type
-  editingRecord.value = record
-  recordSheetOpen.value = true
+  if (record.type === 'water' || record.type === 'food') {
+    feedingRecordSheetMode.value = 'edit'
+    feedingRecordSheetType.value = record.type
+    editingFeedingRecord.value = record
+    feedingRecordSheetOpen.value = true
+  } else {
+    litterSheetMode.value = 'edit'
+    litterSheetType.value = record.type
+    editingLitterRecord.value = record
+    litterSheetOpen.value = true
+  }
 }
 
 function openEditFeedingSession(session: FeedingSession) {
@@ -136,8 +164,12 @@ function openEditFeedingSession(session: FeedingSession) {
   feedingSheetOpen.value = true
 }
 
-function closeRecordSheet() {
-  recordSheetOpen.value = false
+function closeFeedingRecordSheet() {
+  feedingRecordSheetOpen.value = false
+}
+
+function closeLitterSheet() {
+  litterSheetOpen.value = false
 }
 
 function closeFeedingSheet() {
@@ -147,38 +179,58 @@ function closeFeedingSheet() {
 // Sheet 頂端的 pill 只是換一顆 sheet，不是切內部狀態：關掉目前這個，開另一個。
 // 計算機輸入的量要延續過去，所以把切換當下的 amount 一起帶給新開的 sheet。
 function switchRecordToFeeding(amount: string) {
-  if (recordSheetType.value !== 'water' && recordSheetType.value !== 'food') return
-  closeRecordSheet()
-  openStartFeedingSession(recordSheetType.value, amount)
+  closeFeedingRecordSheet()
+  openStartFeedingSession(feedingRecordSheetType.value, amount)
 }
 
 function switchFeedingToRecord(amount: string) {
   closeFeedingSheet()
-  openAddRecord(feedingSheetType.value, amount)
+  openAddFeedingRecord(feedingSheetType.value, amount)
 }
 
-async function handleRecordSave(payload: { amount?: number; timeValue: string; note: string }) {
+async function handleFeedingRecordSave(payload: { amount: number; timeValue: string; note: string }) {
   const occurredAt = dateTimeLocalValueToIso(payload.timeValue)
-  const isLitter = recordSheetType.value === 'pee' || recordSheetType.value === 'poop'
 
-  if (recordSheetMode.value === 'add') {
+  if (feedingRecordSheetMode.value === 'add') {
     if (activeCatId.value == null) return
     await addRecord({
       catId: activeCatId.value,
-      type: recordSheetType.value,
-      ...(isLitter ? {} : { amount: payload.amount, unit: recordSheetType.value === 'water' ? 'ml' : 'g' }),
+      type: feedingRecordSheetType.value,
+      amount: payload.amount,
+      unit: feedingRecordSheetType.value === 'water' ? 'ml' : 'g',
       note: payload.note || null,
       occurredAt,
     })
-  } else if (editingRecord.value) {
-    await editRecord(editingRecord.value.id, {
-      ...(isLitter ? {} : { amount: payload.amount }),
+  } else if (editingFeedingRecord.value) {
+    await editRecord(editingFeedingRecord.value.id, {
+      amount: payload.amount,
       occurredAt,
       note: payload.note || null,
     })
   }
-  recordNoteUsage(recordSheetType.value, payload.note)
-  closeRecordSheet()
+  recordNoteUsage(feedingRecordSheetType.value, payload.note)
+  closeFeedingRecordSheet()
+}
+
+async function handleLitterSave(payload: { timeValue: string; note: string }) {
+  const occurredAt = dateTimeLocalValueToIso(payload.timeValue)
+
+  if (litterSheetMode.value === 'add') {
+    if (activeCatId.value == null) return
+    await addRecord({
+      catId: activeCatId.value,
+      type: litterSheetType.value,
+      note: payload.note || null,
+      occurredAt,
+    })
+  } else if (editingLitterRecord.value) {
+    await editRecord(editingLitterRecord.value.id, {
+      occurredAt,
+      note: payload.note || null,
+    })
+  }
+  recordNoteUsage(litterSheetType.value, payload.note)
+  closeLitterSheet()
 }
 
 async function handleFeedingSave(payload: { amount: number; note: string }) {
@@ -358,17 +410,28 @@ async function handleConfirmDelete() {
     </div>
   </template>
 
-  <RecordFormSheet
-    :open="recordSheetOpen"
-    :mode="recordSheetMode"
-    :type="recordSheetType"
+  <RecordFeedingSheet
+    :open="feedingRecordSheetOpen"
+    :mode="feedingRecordSheetMode"
+    :type="feedingRecordSheetType"
     :cat-name="activeCatName"
-    :record="editingRecord"
+    :record="editingFeedingRecord"
     :saving="saving"
-    :initial-amount="recordSheetInitialAmount"
-    @cancel="closeRecordSheet"
-    @save="handleRecordSave"
+    :initial-amount="feedingRecordSheetInitialAmount"
+    @cancel="closeFeedingRecordSheet"
+    @save="handleFeedingRecordSave"
     @switch-to-feeding="switchRecordToFeeding"
+  />
+
+  <RecordLitterFormSheet
+    :open="litterSheetOpen"
+    :mode="litterSheetMode"
+    :type="litterSheetType"
+    :cat-name="activeCatName"
+    :record="editingLitterRecord"
+    :saving="saving"
+    @cancel="closeLitterSheet"
+    @save="handleLitterSave"
   />
 
   <StartFeedingSheet

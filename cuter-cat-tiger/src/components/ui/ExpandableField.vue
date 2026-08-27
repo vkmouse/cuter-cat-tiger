@@ -2,7 +2,7 @@
 /**
  * 通用的「點一下展開、點一下摺疊」欄位外殼。
  * summary slot 永遠顯示（點擊整列即可切換），預設 slot 只在展開時渲染，
- * 給 DateTimePicker（日曆+時間）跟 RecordFormSheet 裡的 CalculatorPad 共用同一套互動與樣式。
+ * 給 DateTimePicker（日曆+時間）跟 RecordFeedingSheet 裡的 CalculatorPad 共用同一套互動與樣式。
  */
 defineProps<{
   expanded: boolean
@@ -44,10 +44,14 @@ const emit = defineEmits<{
 
 <style scoped>
 .expandable-field {
-  border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: var(--card);
+  background: var(--paper);
   overflow: hidden;
+  transition: background 0.15s ease;
+}
+
+.expandable-field.expanded {
+  background: var(--paper-dark);
 }
 
 .expandable-summary {
@@ -56,7 +60,7 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: none;
   border: none;
   cursor: pointer;
@@ -80,9 +84,12 @@ const emit = defineEmits<{
   transform: rotate(180deg);
 }
 
+/* 展開內容用同一塊底色的內凹卡片承接，不用線條切開，
+   靠 card 跟 paper-dark 的明度差自然分出「摘要列」與「展開區」兩層。 */
 .expandable-body {
-  padding: 0 12px 12px;
-  border-top: 1px solid var(--line);
-  padding-top: 12px;
+  margin: 0 8px 8px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--card);
 }
 </style>

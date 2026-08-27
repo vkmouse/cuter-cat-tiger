@@ -3,10 +3,10 @@
  * 日曆＋時間選擇器，取代原本單純的 <input type="datetime-local">。
  * 日曆網格互動參考 JaNote 的 CalendarPicker（月份翻頁、選日期、今日/現在快速鍵），
  * 但這裡不是全螢幕 modal，而是用 ExpandableField 包成「點一下展開、點一下摺疊」的內嵌欄位，
- * 好跟 RecordFormSheet 裡的 CalculatorPad 維持一致的收合互動。
+ * 好跟 RecordFeedingSheet 裡的 CalculatorPad 維持一致的收合互動。
  *
  * modelValue 沿用 utils/date.ts 的 datetime-local 字串格式（'YYYY-MM-DDTHH:mm'，UTC+8 的牆上時鐘時間，
- * 不帶時區資訊），跟原本 RecordFormSheet 內部 timeValue 的格式完全一致，呼叫端不需要額外轉換。
+ * 不帶時區資訊），跟原本 RecordFormSheet（現拆為 RecordFeedingSheet/RecordLitterFormSheet）內部 timeValue 的格式完全一致，呼叫端不需要額外轉換。
  */
 import { computed, ref, watch } from 'vue'
 import { WEEKDAY_LABELS, weekdayLabel, nowDateTimeLocalValue, todayDateKey } from '../../utils/date'
@@ -240,10 +240,10 @@ const summaryLabel = computed(() => {
 }
 
 .now-btn {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 5px 10px;
+  background: var(--paper-dark);
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
   font-size: 0.76rem;
   font-weight: 600;
   color: var(--ink);
@@ -251,7 +251,8 @@ const summaryLabel = computed(() => {
 }
 
 .now-btn:hover {
-  background: var(--paper-dark);
+  background: var(--water-soft);
+  color: var(--water);
 }
 
 .calendar-weekdays {
@@ -320,13 +321,14 @@ const summaryLabel = computed(() => {
 
 .time-row input[type='time'] {
   flex: 1;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
   font-family: var(--font-mono);
   font-size: 0.92rem;
   color: var(--ink);
-  background: var(--paper);
+  background: var(--card);
+  box-shadow: var(--shadow-raised-active);
   -webkit-appearance: none;
   appearance: none;
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { CatRecord, RecordType } from '../../types'
+import type { CatRecord } from '../../types'
 import { nowDateTimeLocalValue, isoToDateTimeLocalValue } from '../../utils/date'
 import { getQuickNotes } from '../../composables/useQuickNotes'
 import BaseSheet from '../ui/BaseSheet.vue'
@@ -8,18 +8,16 @@ import CalculatorPad from './CalculatorPad.vue'
 import DateTimePicker from './DateTimePicker.vue'
 
 /**
- * 一般紀錄表單：喝水/飼料/尿尿/大便的單次記錄 + 編輯。
- * 「開始餵食」（先給後測）已拆到 StartFeedingSheet，這裡不再處理 feedingSession，
- * 也不再需要 action 這個維度——payload 形狀單純只有一種。
- * 新增模式下 water/food 類型仍保留可以切去「開始餵」的 pill，
- * 這裡 emit switch-to-feeding(amount)，把目前輸入的量帶出去，實際換開哪個 sheet、
- * 要不要延續這個量交給呼叫端決定。
+ * 記錄喝水/飼料的單次量測 + 編輯，從 RecordFormSheet 拆出來。
+ * 尿尿/大便已改用 RecordLitterFormSheet，這裡不再需要 litter 分支。
+ * 新增模式下保留可以切去「開始餵」的 pill，emit switch-to-feeding(amount) 把目前
+ * 輸入的量帶出去，實際換開哪個 sheet 交給呼叫端決定。
  */
 
 const props = defineProps<{
   open: boolean
   mode: 'add' | 'edit'
-  type: RecordType
+  type: 'water' | 'food'
   catName: string
   record?: CatRecord | null
   saving?: boolean
@@ -30,7 +28,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   cancel: []
-  save: [payload: { amount?: number; timeValue: string; note: string }]
+  save: [payload: { amount: number; timeValue: string; note: string }]
   // 帶上目前輸入的量，讓呼叫端可以原封不動延續到 StartFeedingSheet。
   'switch-to-feeding': [amount: string]
 }>()
@@ -41,9 +39,6 @@ const note = ref('')
 const quickNotes = ref<string[]>([])
 const formInstanceKey = ref(0)
 
-const isLitter = (t: RecordType) => t === 'pee' || t === 'poop'
-const isFeedingType = computed(() => props.type === 'water' || props.type === 'food')
-
 watch(
   () => props.open,
   (isOpen) => {
@@ -53,13 +48,12 @@ watch(
       amount.value = String(props.record.amount)
       timeValue.value = isoToDateTimeLocalValue(props.record.occurredAt)
       note.value = props.record.note ?? ''
-      quickNotes.value = getQuickNotes(props.type)
     } else {
       amount.value = props.initialAmount ?? '0'
       timeValue.value = nowDateTimeLocalValue()
       note.value = ''
-      quickNotes.value = getQuickNotes(props.type)
     }
+    quickNotes.value = getQuickNotes(props.type)
 
     formInstanceKey.value += 1
   },
@@ -70,17 +64,13 @@ function applyQuickNote(text: string) {
   note.value = text
 }
 
-const TYPE_ACTION_LABEL: Record<RecordType, string> = {
+const TYPE_ACTION_LABEL: Record<'water' | 'food', string> = {
   water: '記錄喝水',
   food: '記錄飼料',
-  pee: '記錄尿尿',
-  poop: '記錄大便',
 }
-const TYPE_EDIT_LABEL: Record<RecordType, string> = {
+const TYPE_EDIT_LABEL: Record<'water' | 'food', string> = {
   water: '修改喝水紀錄',
   food: '修改飼料紀錄',
-  pee: '修改尿尿紀錄',
-  poop: '修改大便紀錄',
 }
 
 const title = computed(() => {
@@ -92,11 +82,6 @@ const amountUnit = computed(() => (props.type === 'water' ? 'ml' : 'g'))
 
 function handleSubmit() {
   if (!timeValue.value) return
-  if (isLitter(props.type)) {
-    emit('save', { timeValue: timeValue.value, note: note.value.trim() })
-    return
-  }
-
   const n = parseFloat(amount.value)
   if (Number.isNaN(n)) return
   if (props.mode === 'add' && n <= 0) return
@@ -107,7 +92,7 @@ function handleSubmit() {
 <template>
   <BaseSheet :open="open" :title="title" panel-class="sheet-panel--full" @cancel="emit('cancel')">
     <form @submit.prevent="handleSubmit">
-      <div v-if="mode === 'add' && isFeedingType" class="action-toggle" role="group" aria-label="紀錄方式">
+      <div v-if="mode === 'add'" class="action-toggle" role="group" aria-label="紀錄方式">
         <button type="button" class="action-toggle-option active" disabled>
           {{ type === 'water' ? '記錄喝水' : '記錄飼料' }}
         </button>
@@ -121,81 +106,53 @@ function handleSubmit() {
         <DateTimePicker :key="formInstanceKey" v-model="timeValue" />
       </div>
 
-      <template v-if="!isLitter(type)">
-        <div class="amount-note-row">
-          <div class="field">
-            <label>數量</label>
-            <div class="amount-display" :class="{ placeholder: !amount }">
-              {{ amount || '0' }}<span class="amount-unit"> {{ amountUnit }}</span>
-            </div>
-          </div>
-          <div class="field">
-            <label for="fNote">備註</label>
-            <input id="fNote" v-model="note" type="text" />
-          </div>
-        </div>
-
-        <div v-if="quickNotes.length" class="field pill-group quick-notes" :class="{ food: type === 'food' }">
-          <button
-            v-for="text in quickNotes"
-            :key="text"
-            type="button"
-            class="pill"
-            :class="{ active: note === text }"
-            @click="applyQuickNote(text)"
-          >
-            {{ text }}
-          </button>
-        </div>
-
+      <div class="amount-note-row">
         <div class="field">
-          <CalculatorPad
-            :key="formInstanceKey"
-            v-model="amount"
-            :type="type === 'water' ? 'water' : 'food'"
-            :unit="amountUnit"
-            :saving="saving"
-            :require-positive="mode === 'add'"
-            @collapse="() => {}"
-          />
+          <label>數量</label>
+          <div class="amount-display" :class="{ placeholder: !amount }">
+            {{ amount || '0' }}<span class="amount-unit"> {{ amountUnit }}</span>
+          </div>
         </div>
-      </template>
-
-      <div v-else class="field">
-        <label for="fNote">備註</label>
-        <input id="fNote" v-model="note" type="text" />
-        <div v-if="quickNotes.length" class="pill-group quick-notes litter">
-          <button
-            v-for="text in quickNotes"
-            :key="text"
-            type="button"
-            class="pill"
-            :class="{ active: note === text }"
-            @click="applyQuickNote(text)"
-          >
-            {{ text }}
-          </button>
+        <div class="field">
+          <label for="fNote">備註</label>
+          <input id="fNote" v-model="note" type="text" />
         </div>
       </div>
 
-      <template v-if="!isLitter(type)">
-        <div class="sheet-actions">
-          <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
-          <button
-            type="button"
-            class="btn primary"
-            :class="{ food: type === 'food' }"
-            :disabled="saving"
-            @click="handleSubmit"
-          >
-            {{ saving ? '儲存中…' : '儲存' }}
-          </button>
-        </div>
-      </template>
+      <div v-if="quickNotes.length" class="field pill-group quick-notes" :class="{ food: type === 'food' }">
+        <button
+          v-for="text in quickNotes"
+          :key="text"
+          type="button"
+          class="pill"
+          :class="{ active: note === text }"
+          @click="applyQuickNote(text)"
+        >
+          {{ text }}
+        </button>
+      </div>
 
-      <div v-else class="sheet-actions">
+      <div class="field">
+        <CalculatorPad
+          :key="formInstanceKey"
+          v-model="amount"
+          :type="type"
+          :unit="amountUnit"
+          :saving="saving"
+          :require-positive="mode === 'add'"
+          @collapse="() => {}"
+        />
+      </div>
+
+      <div class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
-        <button type="submit" class="btn primary litter" :disabled="saving">
+        <button
+          type="button"
+          class="btn primary"
+          :class="{ food: type === 'food' }"
+          :disabled="saving"
+          @click="handleSubmit"
+        >
           {{ saving ? '儲存中…' : '儲存' }}
         </button>
       </div>
@@ -208,28 +165,29 @@ function handleSubmit() {
   display: grid;
   grid-template-columns: 1fr 1fr;
   padding: 4px;
-  margin-bottom: 18px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  margin-bottom: var(--space-5);
+  border-radius: var(--radius-md);
   background: var(--paper);
+  box-shadow: var(--shadow-raised-active);
   gap: 4px;
 }
 
 .action-toggle-option {
   min-height: 40px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink-soft);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .action-toggle-option.active {
   background: var(--card);
   color: var(--ink);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
+  box-shadow: var(--shadow-raised);
 }
 
 .action-toggle-option:disabled {
@@ -237,14 +195,14 @@ function handleSubmit() {
 }
 
 .quick-notes {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .amount-note-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .amount-note-row .field {
@@ -257,10 +215,11 @@ function handleSubmit() {
   font-family: var(--font-mono);
   font-weight: 600;
   font-size: 1.05rem;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
   background: var(--paper);
+  box-shadow: var(--shadow-raised-active);
   color: var(--ink);
   text-align: right;
 }
