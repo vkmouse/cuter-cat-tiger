@@ -18,7 +18,27 @@ export interface InsertFeedingSessionInput {
   note: string | null
 }
 
+export interface FeedingSessionWithCatNameRow extends FeedingSessionRow {
+  cat_name: string
+}
+
 const FEEDING_SESSION_COLUMNS = `id, cat_id, type, given_amount, unit, note, given_at, created_at, updated_at`
+
+/** 語音意圖辨識需要跨貓咪列出全部進行中紀錄，帶上貓咪名稱供 AI 與確認句使用。 */
+export async function listAllFeedingSessions(
+  db: D1Database,
+): Promise<FeedingSessionWithCatNameRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT fs.id, fs.cat_id, fs.type, fs.given_amount, fs.unit, fs.note,
+              fs.given_at, fs.created_at, fs.updated_at, c.name AS cat_name
+       FROM feeding_sessions fs
+       JOIN cats c ON c.id = fs.cat_id
+       ORDER BY fs.given_at DESC, fs.id DESC`,
+    )
+    .all<FeedingSessionWithCatNameRow>()
+  return results
+}
 
 export async function listFeedingSessionsByCatId(
   db: D1Database,
