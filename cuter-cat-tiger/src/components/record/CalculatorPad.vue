@@ -7,7 +7,9 @@ import { computed, ref, watch } from 'vue'
  * - 按運算符號（+ −）進入 pending 狀態，畫面顯示第一個運算元 + 運算符提示
  * - 再輸入第二個數字後，按鍵顯示「=」，只計算並套用結果
  * - 沒有 pending 狀態時，同一顆鍵顯示「確定」
- *   1. 「確定」不是真的送出表單，只是把外層 ExpandableField 摺疊起來（emit 'collapse'），
+ *   1. 「確定」不是真的送出表單，只是 emit 'collapse' 事件；
+ *      三個表單（RecordFormSheet／StartFeedingSheet／CompleteFeedingSheet）現在都固定展開計算機、
+ *      不再用 ExpandableField 包起來，所以目前呼叫端接到這個事件都是 no-op，
  *      實際存檔仍由外層表單最下方的「儲存」按鈕負責
  *   2. 多加了「結果為負數要擋下來」的規則（cat app 的數量不能是負的）
  */

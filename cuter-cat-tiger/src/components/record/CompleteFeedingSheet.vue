@@ -5,7 +5,6 @@ import { nowDateTimeLocalValue } from '../../utils/date'
 import { round1 } from '../../utils/number'
 import { getQuickNotes } from '../../composables/useQuickNotes'
 import BaseSheet from '../ui/BaseSheet.vue'
-import ExpandableField from '../ui/ExpandableField.vue'
 import CalculatorPad from './CalculatorPad.vue'
 import DateTimePicker from './DateTimePicker.vue'
 
@@ -25,7 +24,6 @@ const remaining = ref('')
 const timeValue = ref('')
 const note = ref('')
 const quickNotes = ref<string[]>([])
-const calcExpanded = ref(true)
 const formInstanceKey = ref(0)
 
 watch(
@@ -36,7 +34,6 @@ watch(
     timeValue.value = nowDateTimeLocalValue()
     note.value = props.session.note ?? ''
     quickNotes.value = getQuickNotes(props.session.type)
-    calcExpanded.value = true
     formInstanceKey.value += 1
   },
   { immediate: true },
@@ -81,40 +78,41 @@ function handleConfirm() {
         <DateTimePicker :key="formInstanceKey" v-model="timeValue" />
       </div>
 
-      <div class="field">
-        <label for="fRemainingNote">備註</label>
-        <input id="fRemainingNote" v-model="note" type="text" />
-        <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: session.type === 'food' }">
-          <button
-            v-for="text in quickNotes"
-            :key="text"
-            type="button"
-            class="pill"
-            :class="{ active: note === text }"
-            @click="applyQuickNote(text)"
-          >
-            {{ text }}
-          </button>
+      <div class="amount-note-row">
+        <div class="field">
+          <label>剩下多少</label>
+          <div class="amount-display" :class="{ placeholder: !remaining }">
+            {{ remaining || '0' }}<span class="amount-unit"> {{ amountUnit }}</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fRemainingNote">備註</label>
+          <input id="fRemainingNote" v-model="note" type="text" />
         </div>
       </div>
 
+      <div v-if="quickNotes.length" class="field pill-group quick-notes" :class="{ food: session.type === 'food' }">
+        <button
+          v-for="text in quickNotes"
+          :key="text"
+          type="button"
+          class="pill"
+          :class="{ active: note === text }"
+          @click="applyQuickNote(text)"
+        >
+          {{ text }}
+        </button>
+      </div>
+
       <div class="field">
-        <ExpandableField v-model:expanded="calcExpanded">
-          <template #summary>
-            <span class="amount-summary-label">剩下多少 ({{ amountUnit }})</span>
-            <span class="amount-summary-value">
-              {{ remaining }}<span v-if="remaining"> {{ amountUnit }}</span>
-            </span>
-          </template>
-          <CalculatorPad
-            :key="formInstanceKey"
-            v-model="remaining"
-            :type="session.type"
-            :unit="amountUnit"
-            :saving="saving"
-            @collapse="calcExpanded = false"
-          />
-        </ExpandableField>
+        <CalculatorPad
+          :key="formInstanceKey"
+          v-model="remaining"
+          :type="session.type"
+          :unit="amountUnit"
+          :saving="saving"
+          @collapse="() => {}"
+        />
         <p v-if="consumedPreview !== null" class="consumed-preview" :class="{ negative: consumedPreview < 0 }">
           {{ consumedPreview < 0 ? '剩的比給的多，等於這次沒有淨消耗' : `這次吃了／喝了約 ${consumedPreview} ${amountUnit}` }}
         </p>
@@ -158,17 +156,39 @@ function handleConfirm() {
   color: #b3452f;
 }
 
-
-.amount-summary-label {
-  font-size: 0.78rem;
-  color: var(--ink-soft);
-  display: block;
-  margin-bottom: 2px;
+.amount-note-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-.amount-summary-value {
+.amount-note-row .field {
+  margin-bottom: 0;
+}
+
+.amount-display {
+  width: 100%;
+  box-sizing: border-box;
   font-family: var(--font-mono);
   font-weight: 600;
-  font-size: 0.98rem;
+  font-size: 1.05rem;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: right;
+}
+
+.amount-display.placeholder {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.amount-unit {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-soft);
 }
 </style>

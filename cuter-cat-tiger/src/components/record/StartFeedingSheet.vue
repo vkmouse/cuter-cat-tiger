@@ -2,14 +2,13 @@
 import { computed, ref, watch } from 'vue'
 import type { FeedingSession } from '../../types'
 import BaseSheet from '../ui/BaseSheet.vue'
-import ExpandableField from '../ui/ExpandableField.vue'
 import CalculatorPad from './CalculatorPad.vue'
 import { getQuickNotes } from '../../composables/useQuickNotes'
 
 /**
  * 先給後測流程 step 1：只記下「給了多少」，建立/編輯一筆 FeedingSession。
  * 從 RecordFormSheet 拆出來（原本用內部 action state 切換），
- * 拆開後跟一般紀錄完全獨立：沒有時間、沒有 litter 分支；備註欄位沿用一般紀錄的樣式並放在數量下方。
+ * 拆開後跟一般紀錄完全獨立：沒有時間、沒有 litter 分支；備註欄位沿用一般紀錄的樣式，跟數量並排顯示。
  * 量一律要求 > 0（先給後測不會有「這次給了 0」的情境）。
  *
  * 新增模式下畫面頂端仍保留跟「記錄」切換的 pill：
@@ -42,7 +41,6 @@ const emit = defineEmits<{
 const amount = ref('')
 const note = ref('')
 const quickNotes = ref<string[]>([])
-const calcExpanded = ref(true)
 const formInstanceKey = ref(0)
 
 watch(
@@ -58,7 +56,6 @@ watch(
       amount.value = props.initialAmount ?? '0'
     }
     quickNotes.value = getQuickNotes(props.type)
-    calcExpanded.value = true
     formInstanceKey.value += 1
   },
   { immediate: true },
@@ -96,40 +93,42 @@ function handleSubmit() {
         </button>
       </div>
 
-      <div class="field">
-        <ExpandableField v-model:expanded="calcExpanded">
-          <template #summary>
-            <span class="amount-summary-value" :class="{ placeholder: !amount }">
-              {{ amount || amountUnit }}<span v-if="amount"> {{ amountUnit }}</span>
-            </span>
-          </template>
-          <CalculatorPad
-            :key="formInstanceKey"
-            v-model="amount"
-            :type="type"
-            :unit="amountUnit"
-            :saving="saving"
-            require-positive
-            @collapse="calcExpanded = false"
-          />
-        </ExpandableField>
+      <div class="amount-note-row">
+        <div class="field">
+          <label>數量</label>
+          <div class="amount-display" :class="{ placeholder: !amount }">
+            {{ amount || '0' }}<span class="amount-unit"> {{ amountUnit }}</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fStartFeedingNote">備註</label>
+          <input id="fStartFeedingNote" v-model="note" type="text" />
+        </div>
+      </div>
+
+      <div v-if="quickNotes.length" class="field pill-group quick-notes" :class="{ food: type === 'food' }">
+        <button
+          v-for="text in quickNotes"
+          :key="text"
+          type="button"
+          class="pill"
+          :class="{ active: note === text }"
+          @click="applyQuickNote(text)"
+        >
+          {{ text }}
+        </button>
       </div>
 
       <div class="field">
-        <label for="fStartFeedingNote">備註</label>
-        <input id="fStartFeedingNote" v-model="note" type="text" />
-        <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: type === 'food' }">
-          <button
-            v-for="text in quickNotes"
-            :key="text"
-            type="button"
-            class="pill"
-            :class="{ active: note === text }"
-            @click="applyQuickNote(text)"
-          >
-            {{ text }}
-          </button>
-        </div>
+        <CalculatorPad
+          :key="formInstanceKey"
+          v-model="amount"
+          :type="type"
+          :unit="amountUnit"
+          :saving="saving"
+          require-positive
+          @collapse="() => {}"
+        />
       </div>
 
       <div class="sheet-actions">
@@ -185,14 +184,39 @@ function handleSubmit() {
   margin-top: 8px;
 }
 
-.amount-summary-value {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 0.98rem;
+.amount-note-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-.amount-summary-value.placeholder {
+.amount-note-row .field {
+  margin-bottom: 0;
+}
+
+.amount-display {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 1.05rem;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: right;
+}
+
+.amount-display.placeholder {
   color: var(--ink-soft);
   font-weight: 500;
+}
+
+.amount-unit {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-soft);
 }
 </style>

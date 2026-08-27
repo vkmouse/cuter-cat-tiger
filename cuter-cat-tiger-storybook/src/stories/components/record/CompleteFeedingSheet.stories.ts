@@ -117,7 +117,7 @@ export const WithQuickNotes: Story = {
   parameters: {
     docs: {
       description: {
-        story: '模擬使用者已經用過幾次類似備註後，備註欄位下方會出現的快速備註 tag（點擊後直接取代備註內容）。',
+        story: '模擬使用者已經用過幾次類似備註後，「剩下多少／備註」並排欄位下方會出現的快速備註 tag（點擊後直接取代備註內容）。',
       },
     },
   },

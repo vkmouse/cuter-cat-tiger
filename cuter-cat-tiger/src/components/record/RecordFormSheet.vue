@@ -4,7 +4,6 @@ import type { CatRecord, RecordType } from '../../types'
 import { nowDateTimeLocalValue, isoToDateTimeLocalValue } from '../../utils/date'
 import { getQuickNotes } from '../../composables/useQuickNotes'
 import BaseSheet from '../ui/BaseSheet.vue'
-import ExpandableField from '../ui/ExpandableField.vue'
 import CalculatorPad from './CalculatorPad.vue'
 import DateTimePicker from './DateTimePicker.vue'
 
@@ -40,7 +39,6 @@ const amount = ref('')
 const timeValue = ref('')
 const note = ref('')
 const quickNotes = ref<string[]>([])
-const calcExpanded = ref(false)
 const formInstanceKey = ref(0)
 
 const isLitter = (t: RecordType) => t === 'pee' || t === 'poop'
@@ -56,13 +54,11 @@ watch(
       timeValue.value = isoToDateTimeLocalValue(props.record.occurredAt)
       note.value = props.record.note ?? ''
       quickNotes.value = getQuickNotes(props.type)
-      calcExpanded.value = !isLitter(props.type)
     } else {
       amount.value = props.initialAmount ?? '0'
       timeValue.value = nowDateTimeLocalValue()
       note.value = ''
       quickNotes.value = getQuickNotes(props.type)
-      calcExpanded.value = isFeedingType.value
     }
 
     formInstanceKey.value += 1
@@ -120,39 +116,55 @@ function handleSubmit() {
         </button>
       </div>
 
-      <template v-if="!isLitter(type)">
-        <div class="field">
-          <ExpandableField v-model:expanded="calcExpanded">
-            <template #summary>
-              <span class="amount-summary-value" :class="{ placeholder: !amount }">
-                {{ amount || amountUnit }}<span v-if="amount"> {{ amountUnit }}</span>
-              </span>
-            </template>
-            <CalculatorPad
-              :key="formInstanceKey"
-              v-model="amount"
-              :type="type === 'water' ? 'water' : 'food'"
-              :unit="amountUnit"
-              :saving="saving"
-              :require-positive="mode === 'add'"
-              @collapse="calcExpanded = false"
-            />
-          </ExpandableField>
-        </div>
-      </template>
-
       <div class="field">
         <label>時間</label>
         <DateTimePicker :key="formInstanceKey" v-model="timeValue" />
       </div>
-      <div class="field">
+
+      <template v-if="!isLitter(type)">
+        <div class="amount-note-row">
+          <div class="field">
+            <label>數量</label>
+            <div class="amount-display" :class="{ placeholder: !amount }">
+              {{ amount || '0' }}<span class="amount-unit"> {{ amountUnit }}</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="fNote">備註</label>
+            <input id="fNote" v-model="note" type="text" />
+          </div>
+        </div>
+
+        <div v-if="quickNotes.length" class="field pill-group quick-notes" :class="{ food: type === 'food' }">
+          <button
+            v-for="text in quickNotes"
+            :key="text"
+            type="button"
+            class="pill"
+            :class="{ active: note === text }"
+            @click="applyQuickNote(text)"
+          >
+            {{ text }}
+          </button>
+        </div>
+
+        <div class="field">
+          <CalculatorPad
+            :key="formInstanceKey"
+            v-model="amount"
+            :type="type === 'water' ? 'water' : 'food'"
+            :unit="amountUnit"
+            :saving="saving"
+            :require-positive="mode === 'add'"
+            @collapse="() => {}"
+          />
+        </div>
+      </template>
+
+      <div v-else class="field">
         <label for="fNote">備註</label>
         <input id="fNote" v-model="note" type="text" />
-        <div
-          v-if="quickNotes.length"
-          class="pill-group quick-notes"
-          :class="{ food: type === 'food', litter: isLitter(type) }"
-        >
+        <div v-if="quickNotes.length" class="pill-group quick-notes litter">
           <button
             v-for="text in quickNotes"
             :key="text"
@@ -228,15 +240,39 @@ function handleSubmit() {
   margin-top: 8px;
 }
 
-
-.amount-summary-value {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 0.98rem;
+.amount-note-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-.amount-summary-value.placeholder {
+.amount-note-row .field {
+  margin-bottom: 0;
+}
+
+.amount-display {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 1.05rem;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: right;
+}
+
+.amount-display.placeholder {
   color: var(--ink-soft);
   font-weight: 500;
+}
+
+.amount-unit {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-soft);
 }
 </style>
