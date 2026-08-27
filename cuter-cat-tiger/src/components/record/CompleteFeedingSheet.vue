@@ -7,6 +7,7 @@ import { getQuickNotes } from '../../composables/useQuickNotes'
 import BaseSheet from '../ui/BaseSheet.vue'
 import CalculatorPad from './CalculatorPad.vue'
 import DateTimePicker from './DateTimePicker.vue'
+import AmountNoteBar from './AmountNoteBar.vue'
 
 const props = defineProps<{
   open: boolean
@@ -71,27 +72,15 @@ function handleConfirm() {
 <template>
   <BaseSheet :open="open" :title="title" panel-class="sheet-panel--full" @cancel="emit('cancel')">
     <template v-if="session">
-      <p class="given-context">這次給了 {{ round1(session.givenAmount) }} {{ session.unit }}</p>
+      <AmountNoteBar
+        :type="session.type"
+        :amount="remaining"
+        :unit="amountUnit"
+        :note="note"
+        @update:note="note = $event"
+      />
 
-      <div class="field">
-        <label>量測時間</label>
-        <DateTimePicker :key="formInstanceKey" v-model="timeValue" />
-      </div>
-
-      <div class="amount-note-row">
-        <div class="field">
-          <label>剩下多少</label>
-          <div class="amount-display" :class="{ placeholder: !remaining }">
-            {{ remaining || '0' }}<span class="amount-unit"> {{ amountUnit }}</span>
-          </div>
-        </div>
-        <div class="field">
-          <label for="fRemainingNote">備註</label>
-          <input id="fRemainingNote" v-model="note" type="text" />
-        </div>
-      </div>
-
-      <div v-if="quickNotes.length" class="field pill-group quick-notes" :class="{ food: session.type === 'food' }">
+      <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: session.type === 'food' }">
         <button
           v-for="text in quickNotes"
           :key="text"
@@ -104,19 +93,20 @@ function handleConfirm() {
         </button>
       </div>
 
-      <div class="field">
-        <CalculatorPad
-          :key="formInstanceKey"
-          v-model="remaining"
-          :type="session.type"
-          :unit="amountUnit"
-          :saving="saving"
-          @collapse="() => {}"
-        />
-        <p v-if="consumedPreview !== null" class="consumed-preview" :class="{ negative: consumedPreview < 0 }">
-          {{ consumedPreview < 0 ? '剩的比給的多，等於這次沒有淨消耗' : `這次吃了／喝了約 ${consumedPreview} ${amountUnit}` }}
-        </p>
-      </div>
+      <CalculatorPad
+        :key="formInstanceKey"
+        v-model="remaining"
+        :type="session.type"
+        :unit="amountUnit"
+        :saving="saving"
+      >
+        <template #datetime>
+          <DateTimePicker :key="formInstanceKey" v-model="timeValue" />
+        </template>
+      </CalculatorPad>
+      <p v-if="consumedPreview !== null" class="consumed-preview" :class="{ negative: consumedPreview < 0 }">
+        {{ consumedPreview < 0 ? '剩的比給的多，等於這次沒有淨消耗' : `這次吃了／喝了約 ${consumedPreview} ${amountUnit}` }}
+      </p>
 
       <div class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
@@ -135,16 +125,6 @@ function handleConfirm() {
 </template>
 
 <style scoped>
-.given-context {
-  margin: -4px 0 14px;
-  font-size: 0.84rem;
-  color: var(--ink-soft);
-}
-
-.quick-notes {
-  margin-top: var(--space-2);
-}
-
 .consumed-preview {
   margin: 8px 0 0;
   font-size: 0.8rem;
@@ -154,42 +134,5 @@ function handleConfirm() {
 
 .consumed-preview.negative {
   color: #b3452f;
-}
-
-.amount-note-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.amount-note-row .field {
-  margin-bottom: 0;
-}
-
-.amount-display {
-  width: 100%;
-  box-sizing: border-box;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 1.05rem;
-  padding: 12px 14px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--paper);
-  box-shadow: var(--shadow-raised-active);
-  color: var(--ink);
-  text-align: right;
-}
-
-.amount-display.placeholder {
-  color: var(--ink-soft);
-  font-weight: 500;
-}
-
-.amount-unit {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--ink-soft);
 }
 </style>

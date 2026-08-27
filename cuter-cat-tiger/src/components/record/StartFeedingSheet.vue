@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import type { FeedingSession } from '../../types'
 import BaseSheet from '../ui/BaseSheet.vue'
 import CalculatorPad from './CalculatorPad.vue'
+import AmountNoteBar from './AmountNoteBar.vue'
 import { getQuickNotes } from '../../composables/useQuickNotes'
 
 /**
@@ -93,20 +94,9 @@ function handleSubmit() {
         </button>
       </div>
 
-      <div class="amount-note-row">
-        <div class="field">
-          <label>數量</label>
-          <div class="amount-display" :class="{ placeholder: !amount }">
-            {{ amount || '0' }}<span class="amount-unit"> {{ amountUnit }}</span>
-          </div>
-        </div>
-        <div class="field">
-          <label for="fStartFeedingNote">備註</label>
-          <input id="fStartFeedingNote" v-model="note" type="text" />
-        </div>
-      </div>
+      <AmountNoteBar :type="type" :amount="amount" :unit="amountUnit" :note="note" @update:note="note = $event" />
 
-      <div v-if="quickNotes.length" class="field pill-group quick-notes" :class="{ food: type === 'food' }">
+      <div v-if="quickNotes.length" class="pill-group quick-notes" :class="{ food: type === 'food' }">
         <button
           v-for="text in quickNotes"
           :key="text"
@@ -119,17 +109,14 @@ function handleSubmit() {
         </button>
       </div>
 
-      <div class="field">
-        <CalculatorPad
-          :key="formInstanceKey"
-          v-model="amount"
-          :type="type"
-          :unit="amountUnit"
-          :saving="saving"
-          require-positive
-          @collapse="() => {}"
-        />
-      </div>
+      <CalculatorPad
+        :key="formInstanceKey"
+        v-model="amount"
+        :type="type"
+        :unit="amountUnit"
+        :saving="saving"
+        require-positive
+      />
 
       <div class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
@@ -146,79 +133,3 @@ function handleSubmit() {
     </form>
   </BaseSheet>
 </template>
-
-<style scoped>
-.action-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  padding: 4px;
-  margin-bottom: var(--space-5);
-  border-radius: var(--radius-md);
-  background: var(--paper);
-  box-shadow: var(--shadow-raised-active);
-  gap: 4px;
-}
-
-.action-toggle-option {
-  min-height: 40px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--ink-soft);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.action-toggle-option.active {
-  background: var(--card);
-  color: var(--ink);
-  box-shadow: var(--shadow-raised);
-}
-
-.action-toggle-option:disabled {
-  cursor: default;
-}
-
-.quick-notes {
-  margin-top: var(--space-2);
-}
-
-.amount-note-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.amount-note-row .field {
-  margin-bottom: 0;
-}
-
-.amount-display {
-  width: 100%;
-  box-sizing: border-box;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 1.05rem;
-  padding: 12px 14px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--paper);
-  box-shadow: var(--shadow-raised-active);
-  color: var(--ink);
-  text-align: right;
-}
-
-.amount-display.placeholder {
-  color: var(--ink-soft);
-  font-weight: 500;
-}
-
-.amount-unit {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--ink-soft);
-}
-</style>

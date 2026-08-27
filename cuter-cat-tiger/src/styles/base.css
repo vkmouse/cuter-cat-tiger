@@ -266,3 +266,44 @@ button {
   outline: 2px solid var(--water);
   outline-offset: 1px;
 }
+
+/* 「記錄／開始餵」切換 pill：RecordFeedingSheet 跟 StartFeedingSheet 共用同一份標記與樣式，
+   統一放這裡，避免兩個 Sheet 各自維護一份幾乎相同的 CSS。 */
+.action-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  margin-bottom: var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: var(--shadow-raised-active);
+  gap: 4px;
+}
+
+.action-toggle-option {
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.action-toggle-option.active {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-raised);
+}
+
+.action-toggle-option:disabled {
+  cursor: default;
+}
+
+/* 快速備註 pill 列（沿用 .pill-group／.pill），三個餵食 Sheet 共用同一個上邊距。 */
+.quick-notes {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-4);
+}

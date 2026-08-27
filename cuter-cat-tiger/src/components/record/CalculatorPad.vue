@@ -5,13 +5,15 @@ import { computed, ref, watch } from 'vue'
  * 簡化版 CalculatorPad（pending operator 狀態機）：
  * - 只保留加減、AC、0～9，拿掉乘除、小數點、退格、00（記錄的量用不到）
  * - 按運算符號（+ −）進入 pending 狀態，畫面顯示第一個運算元 + 運算符提示
- * - 再輸入第二個數字後，按鍵顯示「=」，只計算並套用結果
- * - 沒有 pending 狀態時，同一顆鍵顯示「確定」
- *   1. 「確定」不是真的送出表單，只是 emit 'collapse' 事件；
- *      三個表單（RecordFeedingSheet／StartFeedingSheet／CompleteFeedingSheet）現在都固定展開計算機、
- *      不再用 ExpandableField 包起來，所以目前呼叫端接到這個事件都是 no-op，
- *      實際存檔仍由外層表單最下方的「儲存」按鈕負責
- *   2. 多加了「結果為負數要擋下來」的規則（cat app 的數量不能是負的）
+ * - 再輸入第二個數字後，按鍵顯示「=」，可以按下去計算並套用結果
+ * - 沒有 pending 狀態時，同一顆鍵顯示「確定」，但這顆鍵本質上就是「=」——
+ *   沒有算式可以算的時候，「確定」只是「=」的 disabled 狀態，不做任何事，
+ *   實際存檔仍由外層表單最下方的「儲存」按鈕負責。
+ * - 多加了「結果為負數要擋下來」的規則（cat app 的數量不能是負的）
+ *
+ * datetime slot：CalculatorPad 只負責在按鍵上方「呈現」一塊日期時間 pill 的位置，
+ * 實際的日期時間狀態與互動邏輯仍由外層 Sheet 管理（透過 <DateTimePicker v-model="..."> 傳進 slot），
+ * 不傳這個 slot 就完全不顯示這塊區域（例如 StartFeedingSheet 沒有時間欄位）。
  */
 
 const props = withDefaults(
@@ -29,8 +31,6 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
-  // 沒有 pending 運算式時按下「確定」：不是送出表單，只是請外層把計算機摺疊起來
-  (e: 'collapse'): void
 }>()
 
 const amount = computed({
@@ -57,9 +57,9 @@ watch(
 
 // 跟 JaNote 一樣：pending 狀態下顯示「=」，否則顯示「確定」
 const confirmLabel = computed(() => (pendingOperator.value ? '=' : '確定'))
-// 跟 JaNote 不同：非 pending 狀態下按這顆鍵只是摺疊起來，不需要「有沒有輸入內容」的限制，
-// 因此只要不是 saving 中，任何狀態都可以按。
-const confirmEnabled = computed(() => !props.saving)
+// 這顆鍵本質上是「=」：只有存在可以計算的算式（有 pending 運算子）時才能按，
+// 顯示「確定」的狀態就是「=」的 disabled 狀態，不做任何事。
+const confirmEnabled = computed(() => !!pendingOperator.value && !props.saving)
 
 function clearPending() {
   pendingOperator.value = null
@@ -103,13 +103,8 @@ function applyCalculation(): boolean {
 }
 
 function handleConfirmClick() {
+  // 沒有 pending 算式時這顆鍵是 disabled 的「確定」，不會走到這裡；保留這個檢查只是防呆。
   if (props.saving || !confirmEnabled.value) return
-
-  if (!pendingOperator.value) {
-    // 非 pending 狀態：這顆鍵是「確定」，但只負責摺疊，不送出表單
-    emit('collapse')
-    return
-  }
 
   if (!hasSecondInput.value) {
     // pending 狀態但尚未輸入第二個數字：清除 pending，還原成第一個運算元
@@ -193,6 +188,9 @@ function handleKeyClick(key: string) {
 
 <template>
   <div class="calc-wrap" :class="type">
+    <div v-if="$slots.datetime" class="calc-datetime">
+      <slot name="datetime" />
+    </div>
     <div class="calc-display">
       <div class="pending-op">{{ pendingOperator ? `${firstOperand} ${pendingOperator}` : '\u00a0' }}</div>
       <div class="calc-value">{{ amount || '0' }}<span class="calc-unit"> {{ unit }}</span></div>
@@ -241,6 +239,33 @@ function handleKeyClick(key: string) {
   background: var(--paper-dark);
   border-radius: var(--radius-lg);
   padding: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+/* 日期時間 pill：CalculatorPad 只提供「一塊白色圓角列」的外觀，內容（DateTimePicker）
+   由外層 Sheet 透過 slot 傳進來，展開/收合等互動邏輯完全在 DateTimePicker／ExpandableField 裡，
+   這裡只用 :deep() 覆寫視覺，讓它在深色底盤上呈現跟參考圖一致的白色 pill。 */
+.calc-datetime {
+  margin-bottom: var(--space-3);
+}
+
+.calc-datetime :deep(.expandable-field) {
+  background: var(--card);
+  border-radius: var(--radius-pill);
+}
+
+.calc-datetime :deep(.expandable-field.expanded) {
+  background: var(--card);
+  border-radius: var(--radius-md);
+}
+
+.calc-datetime :deep(.expandable-summary) {
+  padding: 13px 18px;
+  font-weight: 600;
+}
+
+.calc-datetime :deep(.expandable-body) {
+  background: var(--paper);
 }
 
 .calc-display {

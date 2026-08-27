@@ -156,7 +156,7 @@ function handleTimeInput(e: Event) {
 const summaryLabel = computed(() => {
   const [y, m, d] = selectedDateKey.value.split('-').map(Number)
   if (!y) return '選擇時間'
-  return `${y}年${m}月${d}日 ${weekdayLabel(selectedDateKey.value)} · ${timeValue.value}`
+  return `${y}/${pad2(m!)}/${pad2(d!)} ${weekdayLabel(selectedDateKey.value)} ${timeValue.value}`
 })
 </script>
 
