@@ -9,11 +9,11 @@ import { computed, ref, watch } from 'vue'
  *
  * pending operator 狀態機（沿用）：
  * - 只保留加減、AC、0～9，拿掉乘除、小數點、退格、00（記錄的量用不到）
- * - 按運算符號（+ −）進入 pending 狀態，上方小字顯示第一個運算元 + 運算符提示
- * - 再輸入第二個數字後，按鍵顯示「=」且可以按
- * - 「確定」／「=」本質上是同一顆鍵：只要不是「有算式、且已經輸入第二個數字」的狀態，
- *   一律 disabled——按 10（還沒有運算子）disabled；按 10 + （還沒有第二個數字）也 disabled；
- *   10 + 1 才 enabled。不再有「按下去單純摺疊」的行為。
+ * - 按運算符號（+ −）進入 pending 狀態，該運算符鍵會亮起（operator-active）當作唯一提示，
+ *   不再額外顯示「第一個運算元 + 運算符」的一行小字——使用者只在乎最後的結果。
+ * - 這顆鍵固定顯示「=」文字，不因狀態切換文案；只有 enabled/disabled 兩種狀態的差別：
+ *   只要不是「有算式、且已經輸入第二個數字」的狀態，一律 disabled——按 10（還沒有運算子）
+ *   disabled；按 10 + （還沒有第二個數字）也 disabled；10 + 1 才 enabled。
  * - 結果為負數要擋下來（cat app 的數量不能是負的）
  *
  * given-amount / datetime slot：兩者都只負責「呈現」，狀態與互動邏輯留在外層 Sheet，
@@ -63,9 +63,7 @@ watch(
   },
 )
 
-// 跟 JaNote 一樣：pending 狀態下顯示「=」，否則顯示「確定」
-const confirmLabel = computed(() => (pendingOperator.value ? '=' : '確定'))
-// 這顆鍵本質上是「=」：唯有存在「運算子 + 已輸入第二個數字」的完整算式時才能按，
+// 這顆鍵固定顯示「=」，唯有存在「運算子 + 已輸入第二個數字」的完整算式時才能按，
 // 其餘情況（沒有運算子；有運算子但還沒輸入第二個數字）一律 disabled。
 const confirmEnabled = computed(() => !!pendingOperator.value && hasSecondInput.value && !props.saving)
 
@@ -105,7 +103,7 @@ function applyCalculation(): boolean {
   }
   errorMsg.value = ''
   amount.value = String(round2(result))
-  // 算式已結束：清掉 pending 狀態，讓按鍵變回「確定」，避免卡在「=」誤導使用者以為還能接著算。
+  // 算式已結束：清掉 pending 狀態，讓按鍵變回 disabled，避免卡在可按的「=」誤導使用者以為還能接著算。
   clearPending()
   return true
 }
@@ -183,7 +181,7 @@ interface CalcKey {
 }
 
 // 4 欄 × 3 列：每列前 3 格是數字，第 4 格是該列的功能鍵（AC / + / −，三顆視覺風格統一）。
-// 0（佔 3 格）與 =/確定 另外在 template 裡固定放在格線最後一列，不放進這份陣列。
+// 0（佔 3 格）與 = 另外在 template 裡固定放在格線最後一列，不放進這份陣列。
 const GRID_KEYS: CalcKey[] = [
   { key: '7', kind: 'num' }, { key: '8', kind: 'num' }, { key: '9', kind: 'num' }, { key: 'AC', kind: 'op' },
   { key: '4', kind: 'num' }, { key: '5', kind: 'num' }, { key: '6', kind: 'num' }, { key: '+', kind: 'op' },
@@ -205,10 +203,10 @@ function handleKeyClick(key: string) {
       <slot name="datetime" />
     </div>
 
-    <div class="calc-pending-op">{{ pendingOperator ? `${firstOperand} ${pendingOperator}` : '\u00a0' }}</div>
-
     <div class="calc-amount-note">
-      <span class="calc-amount-value">{{ amount || '0' }}<span class="calc-amount-unit"> {{ unit }}</span></span>
+      <span class="calc-amount-value">
+        <span class="calc-amount-number">{{ amount || '0' }}</span><span class="calc-amount-unit">{{ unit }}</span>
+      </span>
       <span class="calc-amount-divider" aria-hidden="true"></span>
       <input
         class="calc-note-input"
@@ -222,7 +220,7 @@ function handleKeyClick(key: string) {
 
     <p v-if="errorMsg" class="calc-error">{{ errorMsg }}</p>
 
-    <div v-if="quickNotes.length" class="pill-group calc-quick-notes" :class="{ food: type === 'food' }">
+    <div v-if="quickNotes.length" class="pill-group calc-quick-notes on-panel" :class="{ food: type === 'food' }">
       <button
         v-for="text in quickNotes"
         :key="text"
@@ -261,7 +259,7 @@ function handleKeyClick(key: string) {
         :disabled="!confirmEnabled"
         @click="handleConfirmClick"
       >
-        {{ confirmLabel }}
+        =
       </button>
     </div>
   </div>
@@ -326,15 +324,6 @@ function handleKeyClick(key: string) {
   background: var(--paper);
 }
 
-.calc-pending-op {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--ink-soft);
-  text-align: right;
-  min-height: 1em;
-  margin: 0 2px 4px;
-}
-
 /* 數量＋備註：白色圓角列，取代原本各自的「數量」「備註」兩個 field。
    數量本身不可編輯（純顯示，實際輸入交給下方鍵盤），備註是可輸入的 input。
    拿掉圖示：Sheet 標題與上方 toggle 已經表達了水/飼料，這裡不用再放一次。 */
@@ -351,13 +340,27 @@ function handleKeyClick(key: string) {
 
 .calc-amount-value {
   flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
   font-family: var(--font-mono);
   font-weight: 600;
   font-size: 1rem;
   color: var(--ink);
 }
 
+/* 預留 4 位數字的寬度（cat app 的量測範圍內夠用），輸入短數字時就不會整個貼著左邊，
+   跟旁邊的分隔線/備註欄保持固定的相對位置。 */
+.calc-amount-number {
+  min-width: 4ch;
+  text-align: left;
+}
+
+/* 固定寬度的 unit 欄位：不論顯示 'ml' 還是 'g'，後面的分隔線／備註起始位置都要對齊在同一個地方，
+   不能因為字元數不同而讓整排跟著跳動。 */
 .calc-amount-unit {
+  display: inline-block;
+  min-width: 2.2ch;
+  margin-left: 3px;
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--ink-soft);
@@ -398,13 +401,11 @@ function handleKeyClick(key: string) {
 }
 
 /* 快速備註現在放進計算機底盤裡，pill 預設底色（--paper-dark）跟底盤同色會糊在一起，
-   所以在這裡覆寫成跟數字鍵一樣的白色，靠深淺差異跟底盤區分。 */
+   所以套用共用的 .on-panel（見 base.css）把未選取狀態覆寫成跟數字鍵一樣的白色，
+   靠深淺差異跟底盤區分；.active 狀態的底色/白字完全交給 .pill.active 系列規則，
+   這裡絕不能碰，否則白字會疊在白底上看不到。 */
 .calc-quick-notes {
   margin-bottom: var(--space-3);
-}
-
-.calc-quick-notes .pill {
-  background: var(--card);
 }
 
 /* 4 欄 grid：3x3 數字 + 每列一顆功能鍵，最後一列 0（佔 3 格）+ =/確定 */
@@ -462,9 +463,10 @@ function handleKeyClick(key: string) {
 }
 
 .calc-btn.confirm-btn:disabled {
-  background: var(--card);
-  color: var(--ink-soft);
-  box-shadow: var(--shadow-raised);
+  background: var(--calc-accent-soft);
+  color: var(--calc-accent);
+  opacity: 0.55;
+  box-shadow: none;
   cursor: not-allowed;
 }
 </style>

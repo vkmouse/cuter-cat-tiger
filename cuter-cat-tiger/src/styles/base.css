@@ -249,6 +249,14 @@ button {
   color: #fff;
 }
 
+/* pill 放在深色底盤（--paper-dark，例如 CalculatorPad／RecordLitterFormSheet 的 record-panel）上時，
+   未選取狀態要換成跟鍵盤數字鍵一樣的 --card 白色，才能跟底盤區分開來。
+   這裡只覆寫 :not(.active)，絕對不能動到 .active 的底色／文字色──
+   否則選取狀態會變成「白字疊在（意外覆寫成）白底上」，完全看不到文字。 */
+.pill-group.on-panel .pill:not(.active) {
+  background: var(--card);
+}
+
 /* 共用表單欄位樣式：input 拿掉描邊，改用底色 + 內凹陰影表現「可輸入的凹槽」，
    跟旁邊沒有邊框的靜態文字自然融合在同一塊面板裡。 */
 .field {
@@ -320,4 +328,64 @@ button {
 .quick-notes {
   margin-top: var(--space-2);
   margin-bottom: var(--space-4);
+}
+
+/* 共用「深色底盤」工作區塊：CalculatorPad（水/飼料，有數量+鍵盤）用自己 scoped 的 .calc-wrap，
+   RecordLitterFormSheet（如廁，沒有數量/鍵盤）改用這裡的共用版本，兩者才會是同一套視覺語言
+   （paper-dark 底盤 + 白色 pill 列 + 快速備註），不必整個搬動 CalculatorPad 的既有結構。 */
+.record-panel {
+  background: var(--paper-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.record-panel .expandable-field {
+  background: var(--card);
+  border-radius: var(--radius-pill);
+  margin-bottom: var(--space-3);
+}
+
+.record-panel .expandable-field.expanded {
+  background: var(--card);
+  border-radius: var(--radius-md);
+}
+
+.record-panel .expandable-summary {
+  padding: 13px 18px;
+  font-weight: 600;
+}
+
+.record-panel .expandable-body {
+  background: var(--paper);
+}
+
+.record-note-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: var(--shadow-raised-active);
+}
+
+.record-note-row input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--ink);
+  padding: 0;
+  box-shadow: none;
+}
+
+.record-note-row input::placeholder {
+  color: var(--ink-soft);
+}
+
+.record-note-row input:focus {
+  outline: none;
 }

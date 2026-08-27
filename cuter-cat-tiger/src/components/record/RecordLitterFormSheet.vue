@@ -74,15 +74,19 @@ function handleSubmit() {
 <template>
   <BaseSheet :open="open" :title="title" panel-class="sheet-panel--full" @cancel="emit('cancel')">
     <form @submit.prevent="handleSubmit">
-      <div class="field">
-        <label>時間</label>
+      <div class="record-panel">
         <DateTimePicker v-model="timeValue" />
-      </div>
 
-      <div class="field">
-        <label for="fNote">備註</label>
-        <input id="fNote" v-model="note" type="text" />
-        <div v-if="quickNotes.length" class="pill-group quick-notes litter">
+        <div class="record-note-row">
+          <input
+            v-model="note"
+            type="text"
+            placeholder="在此輸入備註"
+            aria-label="備註"
+          />
+        </div>
+
+        <div v-if="quickNotes.length" class="pill-group litter on-panel">
           <button
             v-for="text in quickNotes"
             :key="text"
@@ -95,19 +99,15 @@ function handleSubmit() {
           </button>
         </div>
       </div>
+    </form>
 
+    <template #actions>
       <div class="sheet-actions">
         <button type="button" class="btn ghost" @click="emit('cancel')">取消</button>
-        <button type="submit" class="btn primary litter" :disabled="saving">
+        <button type="button" class="btn primary litter" :disabled="saving" @click="handleSubmit">
           {{ saving ? '儲存中…' : '儲存' }}
         </button>
       </div>
-    </form>
+    </template>
   </BaseSheet>
 </template>
-
-<style scoped>
-.quick-notes {
-  margin-top: var(--space-2);
-}
-</style>
