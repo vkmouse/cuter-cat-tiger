@@ -4,7 +4,8 @@ import type { FeedingSessionWithCatNameRow } from '../repositories/feedingSessio
 import { ApiError, parseJsonBody, requireNonEmptyString } from '../utils/validation.js'
 import type { Env } from '../types.js'
 
-const GEMINI_TIMEOUT_MS = 15_000
+const OPENROUTER_TIMEOUT_MS = 15_000
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
 type FeedingType = 'water' | 'food'
 type VoiceAction = 'start_water' | 'start_food' | 'complete_water' | 'complete_food' | 'unclear'
@@ -13,7 +14,7 @@ const START_LABEL: Record<FeedingType, string> = { water: '水', food: '飼料' 
 const COMPLETE_LABEL: Record<FeedingType, string> = { water: '喝水', food: '吃飼料' }
 const UNIT_FOR_TYPE: Record<FeedingType, string> = { water: 'ml', food: 'g' }
 
-interface GeminiIntent {
+interface VoiceIntentAiOutput {
   action: VoiceAction
   catName?: string | null
   amount?: number | null
@@ -30,21 +31,6 @@ interface NextRequest {
 export type VoiceIntentResult =
   | { ok: true; confirmationText: string; nextRequest: NextRequest }
   | { ok: false; reason: string }
-
-const RESPONSE_SCHEMA = {
-  type: 'object',
-  properties: {
-    action: {
-      type: 'string',
-      enum: ['start_water', 'start_food', 'complete_water', 'complete_food', 'unclear'],
-    },
-    catName: { type: 'string', nullable: true },
-    amount: { type: 'number', nullable: true },
-    remainingAmount: { type: 'number', nullable: true },
-    sessionId: { type: 'number', nullable: true },
-  },
-  required: ['action'],
-}
 
 function buildPrompt(
   rawText: string,
@@ -74,7 +60,7 @@ ${JSON.stringify(catList)}
 進行中紀錄清單：
 ${JSON.stringify(sessionList)}
 
-只輸出符合 JSON Schema 的物件，不要有任何其他文字或 Markdown 標記。
+只輸出符合上述欄位定義的 JSON 物件，不要有任何其他文字或 Markdown 標記。
 
 使用者原始文字：
 """
@@ -82,53 +68,55 @@ ${rawText}
 """`
 }
 
-async function callGeminiOnce(prompt: string, apiKey: string, model: string): Promise<GeminiIntent> {
+async function callOpenRouterOnce(
+  prompt: string,
+  apiKey: string,
+  model: string,
+): Promise<VoiceIntentAiOutput> {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS)
+  const timeout = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS)
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: RESPONSE_SCHEMA,
-          },
-        }),
-        signal: controller.signal,
+    const response = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
       },
-    )
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+      }),
+      signal: controller.signal,
+    })
 
     if (!response.ok) {
-      throw new Error(`Gemini API responded with ${response.status}`)
+      throw new Error(`OpenRouter API responded with ${response.status}`)
     }
 
     const data: any = await response.json()
-    const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text
+    const text: string | undefined = data?.choices?.[0]?.message?.content
     if (!text) {
-      throw new Error('Gemini API returned no content')
+      throw new Error('OpenRouter API returned no content')
     }
 
-    return JSON.parse(text) as GeminiIntent
+    return JSON.parse(text) as VoiceIntentAiOutput
   } finally {
     clearTimeout(timeout)
   }
 }
 
 /** 逾時或回傳非合法 JSON 時重試一次，仍失敗就視為 AI provider 錯誤。 */
-async function parseIntentWithGemini(prompt: string, env: Env): Promise<GeminiIntent> {
-  if (!env.GEMINI_API_KEY || !env.GEMINI_MODEL) {
-    throw new ApiError(500, 'GEMINI_API_KEY / GEMINI_MODEL 未設定')
+async function parseIntentWithOpenRouter(prompt: string, env: Env): Promise<VoiceIntentAiOutput> {
+  if (!env.OPENROUTER_API_KEY || !env.OPENROUTER_MODEL) {
+    throw new ApiError(500, 'OPENROUTER_API_KEY / OPENROUTER_MODEL 未設定')
   }
   try {
-    return await callGeminiOnce(prompt, env.GEMINI_API_KEY, env.GEMINI_MODEL)
+    return await callOpenRouterOnce(prompt, env.OPENROUTER_API_KEY, env.OPENROUTER_MODEL)
   } catch {
     try {
-      return await callGeminiOnce(prompt, env.GEMINI_API_KEY, env.GEMINI_MODEL)
+      return await callOpenRouterOnce(prompt, env.OPENROUTER_API_KEY, env.OPENROUTER_MODEL)
     } catch (err) {
       throw new ApiError(502, `AI 服務呼叫失敗：${err instanceof Error ? err.message : String(err)}`)
     }
@@ -147,7 +135,7 @@ export async function resolveVoiceIntent(env: Env, request: Request): Promise<Vo
   const cats = await catRepository.listCats(db)
   const sessions = await feedingSessionRepository.listAllFeedingSessions(db)
 
-  const intent = await parseIntentWithGemini(buildPrompt(rawText, cats, sessions), env)
+  const intent = await parseIntentWithOpenRouter(buildPrompt(rawText, cats, sessions), env)
 
   // 檢查順序沿用規格書表格：action → 貓咪 → 數量(start) → 候選紀錄存在(complete) → 紀錄選擇有效(complete) → 剩餘量(complete)
   if (
