@@ -2,22 +2,13 @@
 import { computed, ref, watch } from 'vue'
 
 /**
- * 「輸入工作區」整塊面板：原本的 CalculatorPad（純鍵盤）+ AmountNoteBar（數量＋備註）+
- * 快速備註 pill 列，現在都收在同一個 --paper-dark 底盤裡，對齊參考圖「日期 → 數量/備註 →
- * 快速備註 → 鍵盤」是同一個視覺群組的方向。AmountNoteBar 已經沒有獨立存在的理由（拿掉圖示後
- * 只剩下純粹的一列，且只有這裡會用到）所以直接併進來，不再是獨立元件。
+ * 加減計算機鍵盤，只保留加減、AC、0～9（拿掉乘除、小數點、退格，記錄的量用不到）。
+ * 按 + / − 進入 pending 狀態，該鍵會亮起（operator-active）當作唯一提示；
+ * 「=」只有在「有運算子、且已輸入第二個數字」時才 enabled，其餘一律 disabled。
+ * 計算結果為負數要擋下來（cat app 的數量不能是負的）。
  *
- * pending operator 狀態機（沿用）：
- * - 只保留加減、AC、0～9，拿掉乘除、小數點、退格、00（記錄的量用不到）
- * - 按運算符號（+ −）進入 pending 狀態，該運算符鍵會亮起（operator-active）當作唯一提示，
- *   不再額外顯示「第一個運算元 + 運算符」的一行小字——使用者只在乎最後的結果。
- * - 這顆鍵固定顯示「=」文字，不因狀態切換文案；只有 enabled/disabled 兩種狀態的差別：
- *   只要不是「有算式、且已經輸入第二個數字」的狀態，一律 disabled——按 10（還沒有運算子）
- *   disabled；按 10 + （還沒有第二個數字）也 disabled；10 + 1 才 enabled。
- * - 結果為負數要擋下來（cat app 的數量不能是負的）
- *
- * given-amount / datetime slot：兩者都只負責「呈現」，狀態與互動邏輯留在外層 Sheet，
- * 不傳就完全不顯示那個區塊（例如 StartFeedingSheet 沒有時間、Record/Start 都沒有已給量）。
+ * given-amount / datetime slot 只負責呈現，狀態與互動邏輯留在外層 Sheet，
+ * 不傳就不顯示該區塊。
  */
 
 const props = withDefaults(

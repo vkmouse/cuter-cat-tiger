@@ -112,7 +112,7 @@ function fail(reason: string): VoiceIntentResult {
   return { ok: false, reason }
 }
 
-/** 檢查順序沿用規格書表格：action → 貓咪 → 數量(start) → 候選紀錄存在(complete) → 紀錄選擇有效(complete) → 剩餘量(complete) */
+/** 依序檢查：action → 貓咪 → 數量(start) → 候選紀錄存在(complete) → 紀錄選擇有效(complete) → 剩餘量(complete) */
 function validateIntent(
   intent: VoiceIntentAiOutput,
   cats: { id: number; name: string }[],

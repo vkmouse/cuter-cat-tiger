@@ -1,12 +1,9 @@
 <script setup lang="ts">
 /**
- * 日曆＋時間選擇器，取代原本單純的 <input type="datetime-local">。
- * 日曆網格互動參考 JaNote 的 CalendarPicker（月份翻頁、選日期、今日/現在快速鍵），
- * 但這裡不是全螢幕 modal，而是用 ExpandableField 包成「點一下展開、點一下摺疊」的內嵌欄位，
- * 好跟 RecordFeedingSheet 裡的 CalculatorPad 維持一致的收合互動。
+ * 日曆＋時間選擇器，用 ExpandableField 包成「點一下展開、點一下摺疊」的內嵌欄位，
+ * 跟 CalculatorPad 維持一致的收合互動。
  *
- * modelValue 沿用 utils/date.ts 的 datetime-local 字串格式（'YYYY-MM-DDTHH:mm'，UTC+8 的牆上時鐘時間，
- * 不帶時區資訊），跟原本 RecordFormSheet（現拆為 RecordFeedingSheet/RecordLitterFormSheet）內部 timeValue 的格式完全一致，呼叫端不需要額外轉換。
+ * modelValue 為 datetime-local 字串格式（'YYYY-MM-DDTHH:mm'，UTC+8 的牆上時鐘時間，不帶時區資訊）。
  */
 import { computed, ref, useId, watch } from 'vue'
 import { WEEKDAY_LABELS, weekdayLabel, nowDateTimeLocalValue, todayDateKey } from '../../utils/date'

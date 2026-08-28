@@ -515,7 +515,6 @@ async function handleConfirmDelete() {
   overflow: hidden;
 }
 
-/* 每個操作項目需要維持足夠的點擊區域。 */
 .quick-add {
   display: grid;
   grid-template-columns: 1fr 1fr;

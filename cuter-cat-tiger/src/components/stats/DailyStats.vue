@@ -32,7 +32,6 @@ defineProps<{
 </template>
 
 <style scoped>
-/* 四項統計維持足夠的顯示空間。 */
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -114,10 +114,8 @@ export async function updateRecord(
   const patch: UpdateRecordInput = {}
 
   if (isQuantifiedType(existing.type)) {
-    // 修改時不能沿用 createRecord 的「必須 > 0」規則：
-    // 這筆紀錄如果是 feeding session 完成量測時算出來的，amount 本來就可能是 0 或負數
-    // （剩的比給的多），若編輯時（例如只是想改備註或時間）連帶把 amount 重新驗證成「必須 > 0」，
-    // 會導致這類紀錄永遠無法被編輯、儲存必定 400。因此這裡只驗證「是數字」，不限制正負。
+    // 不沿用 createRecord 的「必須 > 0」：feeding session 完成量測算出的 amount
+    // 可能是 0 或負數，若編輯時也套用該規則，這類紀錄會永遠存不進去。
     if (body.amount !== undefined) {
       patch.amount = requireFiniteNumber(body.amount, 'amount')
     }
