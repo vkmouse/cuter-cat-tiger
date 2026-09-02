@@ -10,8 +10,8 @@ import DateTimePicker from './DateTimePicker.vue'
 /**
  * 記錄喝水/飼料的單次量測 + 編輯，從 RecordFormSheet 拆出來。
  * 尿尿/大便已改用 RecordLitterFormSheet，這裡不再需要 litter 分支。
- * 新增模式下保留可以切去「開始餵」的 pill，emit switch-to-feeding(amount) 把目前
- * 輸入的量帶出去，實際換開哪個 sheet 交給呼叫端決定。
+ * 新增模式下保留可以切去「開始餵」的 pill，emit switch-to-feeding({ amount, note }) 把目前
+ * 輸入的量與備註帶出去，實際換開哪個 sheet 交給呼叫端決定。
  *
  * 日期、數量+備註、快速備註、鍵盤現在是同一個視覺群組，全部收在 CalculatorPad 裡
  * （日期時間透過 #datetime slot 傳入，狀態仍留在這個 Sheet 管理）。
@@ -24,16 +24,17 @@ const props = defineProps<{
   catName: string
   record?: CatRecord | null
   saving?: boolean
-  // 從 StartFeedingSheet 透過切換 pill 過來時，帶著對方當下輸入的量延續顯示；
-  // 只在 mode === 'add' 時採用，edit 模式一律以 record 本身的量為準。
+  // 從 StartFeedingSheet 透過切換 pill 過來時，帶著對方當下輸入的量與備註延續顯示；
+  // 只在 mode === 'add' 時採用，edit 模式一律以 record 本身的量/備註為準。
   initialAmount?: string
+  initialNote?: string
 }>()
 
 const emit = defineEmits<{
   cancel: []
   save: [payload: { amount: number; timeValue: string; note: string }]
-  // 帶上目前輸入的量，讓呼叫端可以原封不動延續到 StartFeedingSheet。
-  'switch-to-feeding': [amount: string]
+  // 帶上目前輸入的量與備註，讓呼叫端可以原封不動延續到 StartFeedingSheet。
+  'switch-to-feeding': [payload: { amount: string; note: string }]
 }>()
 
 const amount = ref('')
@@ -54,7 +55,7 @@ watch(
     } else {
       amount.value = props.initialAmount ?? '0'
       timeValue.value = nowDateTimeLocalValue()
-      note.value = ''
+      note.value = props.initialNote ?? ''
     }
     quickNotes.value = getQuickNotes(props.type)
 
@@ -95,7 +96,11 @@ function handleSubmit() {
         <button type="button" class="action-toggle-option active" disabled>
           {{ type === 'water' ? '記錄喝水' : '記錄飼料' }}
         </button>
-        <button type="button" class="action-toggle-option" @click="emit('switch-to-feeding', amount)">
+        <button
+          type="button"
+          class="action-toggle-option"
+          @click="emit('switch-to-feeding', { amount: amount, note: note })"
+        >
           {{ type === 'water' ? '開始餵水' : '開始餵飼料' }}
         </button>
       </div>

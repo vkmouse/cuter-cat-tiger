@@ -52,6 +52,10 @@ const meta = {
       control: 'text',
       description: 'add 模式下的初始金額。從 StartFeedingSheet 切換 pill 過來時，由呼叫端帶入延續輸入的量。',
     },
+    initialNote: {
+      control: 'text',
+      description: 'add 模式下的初始備註。從 StartFeedingSheet 切換 pill 過來時，由呼叫端帶入延續輸入的備註。',
+    },
     cancel: { action: 'cancel' },
     save: { action: 'save' },
     'switch-to-feeding': { action: 'switch-to-feeding' },

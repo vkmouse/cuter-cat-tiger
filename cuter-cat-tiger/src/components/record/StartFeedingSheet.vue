@@ -13,8 +13,8 @@ import { getQuickNotes } from '../../composables/useQuickNotes'
  * 量一律要求 > 0（先給後測不會有「這次給了 0」的情境）。
  *
  * 新增模式下畫面頂端仍保留跟「記錄」切換的 pill：
- * 這裡不是切內部狀態，而是 emit('switch-to-record', amount) 交給呼叫端關掉這個 sheet、
- * 換開 RecordFeedingSheet，並把目前輸入的量帶過去延續顯示。
+ * 這裡不是切內部狀態，而是 emit('switch-to-record', { amount, note }) 交給呼叫端關掉這個 sheet、
+ * 換開 RecordFeedingSheet，並把目前輸入的量與備註帶過去延續顯示。
  */
 
 const props = withDefaults(
@@ -25,9 +25,10 @@ const props = withDefaults(
     catName: string
     feedingSession?: FeedingSession | null
     saving?: boolean
-    // 從 RecordFeedingSheet 透過切換 pill 過來時，帶著對方當下輸入的量延續顯示；
-    // 只在 mode === 'add' 時採用，edit 模式一律以 feedingSession 本身的量為準。
+    // 從 RecordFeedingSheet 透過切換 pill 過來時，帶著對方當下輸入的量與備註延續顯示；
+    // 只在 mode === 'add' 時採用，edit 模式一律以 feedingSession 本身的量/備註為準。
     initialAmount?: string
+    initialNote?: string
   }>(),
   { saving: false, feedingSession: null },
 )
@@ -35,8 +36,8 @@ const props = withDefaults(
 const emit = defineEmits<{
   cancel: []
   save: [payload: { amount: number; note: string }]
-  // 帶上目前輸入的量，讓呼叫端可以原封不動延續到 RecordFeedingSheet。
-  'switch-to-record': [amount: string]
+  // 帶上目前輸入的量與備註，讓呼叫端可以原封不動延續到 RecordFeedingSheet。
+  'switch-to-record': [payload: { amount: string; note: string }]
 }>()
 
 const amount = ref('')
@@ -53,7 +54,7 @@ watch(
       amount.value = String(props.feedingSession.givenAmount)
       note.value = props.feedingSession.note ?? ''
     } else {
-      note.value = ''
+      note.value = props.initialNote ?? ''
       amount.value = props.initialAmount ?? '0'
     }
     quickNotes.value = getQuickNotes(props.type)
@@ -82,7 +83,11 @@ function handleSubmit() {
   <BaseSheet :open="open" :title="title" panel-class="sheet-panel--full" @cancel="emit('cancel')">
     <form @submit.prevent="handleSubmit">
       <div v-if="mode === 'add'" class="action-toggle" role="group" aria-label="紀錄方式">
-        <button type="button" class="action-toggle-option" @click="emit('switch-to-record', amount)">
+        <button
+          type="button"
+          class="action-toggle-option"
+          @click="emit('switch-to-record', { amount: amount, note: note })"
+        >
           {{ type === 'water' ? '記錄喝水' : '記錄飼料' }}
         </button>
         <button type="button" class="action-toggle-option active" disabled>

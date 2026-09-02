@@ -97,8 +97,9 @@ const feedingRecordSheetOpen = ref(false)
 const feedingRecordSheetMode = ref<'add' | 'edit'>('add')
 const feedingRecordSheetType = ref<'water' | 'food'>('water')
 const editingFeedingRecord = ref<CatRecord | null>(null)
-// 只在「從 StartFeedingSheet 切換過來」時會帶值，開給 RecordFeedingSheet 的 :initial-amount 用。
+// 只在「從 StartFeedingSheet 切換過來」時會帶值，開給 RecordFeedingSheet 的 :initial-amount / :initial-note 用。
 const feedingRecordSheetInitialAmount = ref('')
+const feedingRecordSheetInitialNote = ref('')
 
 const litterSheetOpen = ref(false)
 const litterSheetMode = ref<'add' | 'edit'>('add')
@@ -109,14 +110,16 @@ const feedingSheetOpen = ref(false)
 const feedingSheetMode = ref<'add' | 'edit'>('add')
 const feedingSheetType = ref<'water' | 'food'>('water')
 const editingFeedingSession = ref<FeedingSession | null>(null)
-// 只在「從 RecordFeedingSheet 切換過來」時會帶值，開給 StartFeedingSheet 的 :initial-amount 用。
+// 只在「從 RecordFeedingSheet 切換過來」時會帶值，開給 StartFeedingSheet 的 :initial-amount / :initial-note 用。
 const feedingSheetInitialAmount = ref('')
+const feedingSheetInitialNote = ref('')
 
-function openAddFeedingRecord(type: 'water' | 'food', initialAmount = '') {
+function openAddFeedingRecord(type: 'water' | 'food', initialAmount = '', initialNote = '') {
   feedingRecordSheetMode.value = 'add'
   feedingRecordSheetType.value = type
   editingFeedingRecord.value = null
   feedingRecordSheetInitialAmount.value = initialAmount
+  feedingRecordSheetInitialNote.value = initialNote
   feedingRecordSheetOpen.value = true
 }
 
@@ -127,11 +130,12 @@ function openAddLitterRecord(type: 'pee' | 'poop') {
   litterSheetOpen.value = true
 }
 
-function openStartFeedingSession(type: 'water' | 'food', initialAmount = '') {
+function openStartFeedingSession(type: 'water' | 'food', initialAmount = '', initialNote = '') {
   feedingSheetMode.value = 'add'
   feedingSheetType.value = type
   editingFeedingSession.value = null
   feedingSheetInitialAmount.value = initialAmount
+  feedingSheetInitialNote.value = initialNote
   feedingSheetOpen.value = true
 }
 
@@ -177,15 +181,15 @@ function closeFeedingSheet() {
 }
 
 // Sheet 頂端的 pill 只是換一顆 sheet，不是切內部狀態：關掉目前這個，開另一個。
-// 計算機輸入的量要延續過去，所以把切換當下的 amount 一起帶給新開的 sheet。
-function switchRecordToFeeding(amount: string) {
+// 計算機輸入的量與備註要延續過去，所以把切換當下的值一起帶給新開的 sheet。
+function switchRecordToFeeding(payload: { amount: string; note: string }) {
   closeFeedingRecordSheet()
-  openStartFeedingSession(feedingRecordSheetType.value, amount)
+  openStartFeedingSession(feedingRecordSheetType.value, payload.amount, payload.note)
 }
 
-function switchFeedingToRecord(amount: string) {
+function switchFeedingToRecord(payload: { amount: string; note: string }) {
   closeFeedingSheet()
-  openAddFeedingRecord(feedingSheetType.value, amount)
+  openAddFeedingRecord(feedingSheetType.value, payload.amount, payload.note)
 }
 
 async function handleFeedingRecordSave(payload: { amount: number; timeValue: string; note: string }) {
@@ -418,6 +422,7 @@ async function handleConfirmDelete() {
     :record="editingFeedingRecord"
     :saving="saving"
     :initial-amount="feedingRecordSheetInitialAmount"
+    :initial-note="feedingRecordSheetInitialNote"
     @cancel="closeFeedingRecordSheet"
     @save="handleFeedingRecordSave"
     @switch-to-feeding="switchRecordToFeeding"
@@ -442,6 +447,7 @@ async function handleConfirmDelete() {
     :feeding-session="editingFeedingSession"
     :saving="feedingSessionSaving"
     :initial-amount="feedingSheetInitialAmount"
+    :initial-note="feedingSheetInitialNote"
     @cancel="closeFeedingSheet"
     @save="handleFeedingSave"
     @switch-to-record="switchFeedingToRecord"

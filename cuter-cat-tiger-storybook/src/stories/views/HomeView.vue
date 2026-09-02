@@ -163,8 +163,9 @@ const feedingRecordSheetMode = ref<'add' | 'edit'>('add')
 const feedingRecordSheetType = ref<'water' | 'food'>('water')
 const editingFeedingRecord = ref<CatRecord | null>(null)
 const feedingRecordSaving = ref(false)
-// 只在「從 StartFeedingSheet 切換過來」時會帶值，開給 RecordFeedingSheet 的 :initial-amount 用。
+// 只在「從 StartFeedingSheet 切換過來」時會帶值，開給 RecordFeedingSheet 的 :initial-amount / :initial-note 用。
 const feedingRecordSheetInitialAmount = ref('')
+const feedingRecordSheetInitialNote = ref('')
 
 // ---------- 新增/編輯尿尿大便底部抽屜 ----------
 const litterSheetOpen = ref(false)
@@ -179,14 +180,16 @@ const feedingSheetMode = ref<'add' | 'edit'>('add')
 const feedingSheetType = ref<'water' | 'food'>('water')
 const editingFeedingSession = ref<FeedingSession | null>(null)
 const feedingSessionSaving = ref(false)
-// 只在「從 RecordFeedingSheet 切換過來」時會帶值，開給 StartFeedingSheet 的 :initial-amount 用。
+// 只在「從 RecordFeedingSheet 切換過來」時會帶值，開給 StartFeedingSheet 的 :initial-amount / :initial-note 用。
 const feedingSheetInitialAmount = ref('')
+const feedingSheetInitialNote = ref('')
 
-function openAddFeedingRecord(type: 'water' | 'food', initialAmount = '') {
+function openAddFeedingRecord(type: 'water' | 'food', initialAmount = '', initialNote = '') {
   feedingRecordSheetMode.value = 'add'
   feedingRecordSheetType.value = type
   editingFeedingRecord.value = null
   feedingRecordSheetInitialAmount.value = initialAmount
+  feedingRecordSheetInitialNote.value = initialNote
   feedingRecordSheetOpen.value = true
 }
 
@@ -197,11 +200,12 @@ function openAddLitterRecord(type: 'pee' | 'poop') {
   litterSheetOpen.value = true
 }
 
-function openStartFeedingSession(type: 'water' | 'food', initialAmount = '') {
+function openStartFeedingSession(type: 'water' | 'food', initialAmount = '', initialNote = '') {
   feedingSheetMode.value = 'add'
   feedingSheetType.value = type
   editingFeedingSession.value = null
   feedingSheetInitialAmount.value = initialAmount
+  feedingSheetInitialNote.value = initialNote
   feedingSheetOpen.value = true
 }
 
@@ -246,14 +250,14 @@ function closeFeedingSheet() {
   feedingSheetOpen.value = false
 }
 
-function switchRecordToFeeding(amount: string) {
+function switchRecordToFeeding(payload: { amount: string; note: string }) {
   closeFeedingRecordSheet()
-  openStartFeedingSession(feedingRecordSheetType.value, amount)
+  openStartFeedingSession(feedingRecordSheetType.value, payload.amount, payload.note)
 }
 
-function switchFeedingToRecord(amount: string) {
+function switchFeedingToRecord(payload: { amount: string; note: string }) {
   closeFeedingSheet()
-  openAddFeedingRecord(feedingSheetType.value, amount)
+  openAddFeedingRecord(feedingSheetType.value, payload.amount, payload.note)
 }
 
 function handleFeedingRecordSave(payload: { amount: number; timeValue: string; note: string }) {
@@ -564,6 +568,7 @@ function resetDemo() {
     :record="editingFeedingRecord"
     :saving="feedingRecordSaving"
     :initial-amount="feedingRecordSheetInitialAmount"
+    :initial-note="feedingRecordSheetInitialNote"
     @cancel="closeFeedingRecordSheet"
     @save="handleFeedingRecordSave"
     @switch-to-feeding="switchRecordToFeeding"
@@ -588,6 +593,7 @@ function resetDemo() {
     :feeding-session="editingFeedingSession"
     :saving="feedingSessionSaving"
     :initial-amount="feedingSheetInitialAmount"
+    :initial-note="feedingSheetInitialNote"
     @cancel="closeFeedingSheet"
     @save="handleFeedingSave"
     @switch-to-record="switchFeedingToRecord"
