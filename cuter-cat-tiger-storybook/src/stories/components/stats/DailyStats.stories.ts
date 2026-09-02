@@ -27,6 +27,12 @@ const meta = {
       control: 'boolean',
       description: '載入中時所有數字改顯示 —。',
     },
+    disabled: {
+      control: 'boolean',
+      description: '沒有選取貓咪時鎖住卡片上的按鈕。',
+    },
+    'quick-record': { action: 'quick-record' },
+    'start-feeding': { action: 'start-feeding' },
   },
 } satisfies Meta<typeof DailyStats>
 
