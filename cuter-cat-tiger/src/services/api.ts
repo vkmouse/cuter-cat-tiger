@@ -123,9 +123,10 @@ export async function fetchDailyStats(date: string): Promise<DailyStat[]> {
 }
 
 
-export async function fetchFeedingSessions(catId: number): Promise<FeedingSession[]> {
-  const params = new URLSearchParams({ catId: String(catId) })
-  const res = await authorizedFetch(`/api/feeding-sessions?${params.toString()}`)
+/** 不帶 catId 會取得所有貓咪的進行中餵食（供批次操作用）。 */
+export async function fetchFeedingSessions(catId?: number): Promise<FeedingSession[]> {
+  const params = catId != null ? `?${new URLSearchParams({ catId: String(catId) }).toString()}` : ''
+  const res = await authorizedFetch(`/api/feeding-sessions${params}`)
   return parseJsonOrThrow<FeedingSession[]>(res, '無法取得進行中的餵食')
 }
 

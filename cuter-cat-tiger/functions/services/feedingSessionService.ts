@@ -49,12 +49,14 @@ function requireGivenAmount(value: unknown): number {
   return amount
 }
 
+/** 不帶 catId 時回傳所有貓咪的進行中餵食，供批次開始／完成用。 */
 export async function listFeedingSessions(
   db: D1Database,
   catIdRaw: string | null,
 ): Promise<FeedingSessionDto[]> {
   if (!catIdRaw) {
-    throw new ApiError(400, '缺少 catId')
+    const rows = await feedingSessionRepository.listAllFeedingSessions(db)
+    return rows.map(toDto)
   }
   const catId = requirePositiveInt(catIdRaw, 'catId')
 

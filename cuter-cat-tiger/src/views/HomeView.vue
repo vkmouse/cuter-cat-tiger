@@ -12,11 +12,15 @@ import RecordLitterFormSheet from '../components/record/RecordLitterFormSheet.vu
 import StartFeedingSheet from '../components/record/StartFeedingSheet.vue'
 import PendingFeedingList from '../components/record/PendingFeedingList.vue'
 import CompleteFeedingSheet from '../components/record/CompleteFeedingSheet.vue'
+import BatchFeedingBar from '../components/record/BatchFeedingBar.vue'
+import BatchStartFeedingSheet from '../components/record/BatchStartFeedingSheet.vue'
+import BatchCompleteFeedingSheet from '../components/record/BatchCompleteFeedingSheet.vue'
 import { recordNoteUsage } from '../composables/useQuickNotes'
 import ConfirmSheet from '../components/ui/ConfirmSheet.vue'
 import { useCats } from '../composables/useCats'
 import { useRecords } from '../composables/useRecords'
 import { useFeedingSessions } from '../composables/useFeedingSessions'
+import { useAllFeedingSessions } from '../composables/useAllFeedingSessions'
 import { useDailyStats } from '../composables/useDailyStats'
 import { useAllCatsDailyStats } from '../composables/useAllCatsDailyStats'
 import { addDaysToDateKey, dateTimeLocalValueToIso, todayDateKey } from '../utils/date'
@@ -74,6 +78,14 @@ const {
   cancelling: feedingSessionCancelling,
   completing: feedingSessionCompleting,
 } = useFeedingSessions(activeCatId)
+
+const {
+  sessions: allFeedingSessions,
+  startBatch,
+  completeBatch,
+  starting: batchStarting,
+  completing: batchCompleting,
+} = useAllFeedingSessions()
 
 const allCatsStatsOpen = ref(false)
 const {
@@ -256,6 +268,44 @@ async function handleFeedingSave(payload: { amount: number; note: string }) {
   closeFeedingSheet()
 }
 
+const batchStartOpen = ref(false)
+
+function openBatchStart() {
+  batchStartOpen.value = true
+}
+function closeBatchStart() {
+  batchStartOpen.value = false
+}
+
+async function handleBatchStartSave(rows: Array<{ catId: number; type: 'water' | 'food'; amount: number; note: string }>) {
+  await startBatch(
+    rows.map((r) => ({ catId: r.catId, type: r.type, amount: r.amount, unit: r.type === 'water' ? 'ml' : 'g', note: r.note || null })),
+  )
+  rows.forEach((r) => recordNoteUsage(r.type, r.note))
+  closeBatchStart()
+}
+
+const batchCompleteOpen = ref(false)
+
+function openBatchComplete() {
+  batchCompleteOpen.value = true
+}
+function closeBatchComplete() {
+  batchCompleteOpen.value = false
+}
+
+async function handleBatchCompleteSave(payload: {
+  items: Array<{ id: number; type: 'water' | 'food'; remainingAmount: number; note: string }>
+  timeValue: string
+}) {
+  const occurredAt = dateTimeLocalValueToIso(payload.timeValue)
+  await completeBatch(
+    payload.items.map((i) => ({ id: i.id, payload: { remainingAmount: i.remainingAmount, occurredAt, note: i.note || null } })),
+  )
+  payload.items.forEach((i) => recordNoteUsage(i.type, i.note))
+  closeBatchComplete()
+}
+
 const completeSheetOpen = ref(false)
 const completingSession = ref<FeedingSession | null>(null)
 
@@ -382,6 +432,12 @@ async function handleConfirmDelete() {
     <div class="card">
       <DateNav :date="selectedDate" @prev-day="goPrevDay" @next-day="goNextDay" @open-all-cats-stats="openAllCatsStats" />
 
+      <BatchFeedingBar
+        :pending-count="allFeedingSessions.length"
+        @start-batch="openBatchStart"
+        @complete-batch="openBatchComplete"
+      />
+
       <DailyStats
         :water-ml="waterMl"
         :food-g="foodG"
@@ -450,6 +506,23 @@ async function handleConfirmDelete() {
     :saving="feedingSessionCompleting"
     @cancel="closeCompleteSheet"
     @save="handleCompleteSave"
+  />
+
+  <BatchStartFeedingSheet
+    :open="batchStartOpen"
+    :cats="cats"
+    :saving="batchStarting"
+    @cancel="closeBatchStart"
+    @save="handleBatchStartSave"
+  />
+
+  <BatchCompleteFeedingSheet
+    :open="batchCompleteOpen"
+    :sessions="allFeedingSessions"
+    :cats="cats"
+    :saving="batchCompleting"
+    @cancel="closeBatchComplete"
+    @save="handleBatchCompleteSave"
   />
 
   <ConfirmSheet
