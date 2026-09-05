@@ -2,9 +2,10 @@
 // Storybook 專用檔案，不屬於正式 app 程式碼，只是刻意跟原始碼同名放在對應的
 // views/ 資料夾下，方便對照：這裡示範的是 cuter-cat-tiger/src/views/HomeView.vue。
 // 目的：把 components/ 底下所有元件組裝成跟正式版一樣的畫面，
-// 但用記憶體內的假資料 + setTimeout 模擬延遲取代真實 API（useCats/useRecords/useFeedingSessions/...），
+// 但用記憶體內的假資料 + setTimeout 模擬延遲取代真實 API（useCats/useRecords/useFeedingSessions/useAllFeedingSessions/...），
 // 讓 Storybook 裡可以真的點擊新增/編輯/刪除紀錄、切換貓咪、編輯貓咪、
-// 開始／編輯／完成／取消「先給後測」餵食 session、切換日期、看多貓總覽。
+// 開始／編輯／完成／取消「先給後測」餵食 session、批次開始／完成（跨貓咪一次操作）、
+// 切換日期、看多貓總覽。
 import { computed, reactive, ref, watch } from 'vue'
 import CatTabs from '../../../../cuter-cat-tiger/src/components/cat/CatTabs.vue'
 import AddCatSheet from '../../../../cuter-cat-tiger/src/components/cat/AddCatSheet.vue'
@@ -18,6 +19,9 @@ import RecordLitterFormSheet from '../../../../cuter-cat-tiger/src/components/re
 import StartFeedingSheet from '../../../../cuter-cat-tiger/src/components/record/StartFeedingSheet.vue'
 import PendingFeedingList from '../../../../cuter-cat-tiger/src/components/record/PendingFeedingList.vue'
 import CompleteFeedingSheet from '../../../../cuter-cat-tiger/src/components/record/CompleteFeedingSheet.vue'
+import BatchFeedingBar from '../../../../cuter-cat-tiger/src/components/record/BatchFeedingBar.vue'
+import BatchStartFeedingSheet from '../../../../cuter-cat-tiger/src/components/record/BatchStartFeedingSheet.vue'
+import BatchCompleteFeedingSheet from '../../../../cuter-cat-tiger/src/components/record/BatchCompleteFeedingSheet.vue'
 import ConfirmSheet from '../../../../cuter-cat-tiger/src/components/ui/ConfirmSheet.vue'
 import { addDaysToDateKey, dateKeyFromIso, dateTimeLocalValueToIso, todayDateKey } from '../../../../cuter-cat-tiger/src/utils/date'
 import type { Cat, CatRecord, DailyStat, FeedingSession, RecordType } from '../../../../cuter-cat-tiger/src/types'
@@ -350,6 +354,77 @@ function handleFeedingSave(payload: { amount: number }) {
   }, 400)
 }
 
+// ---------- 批次開始餵食：所有貓咪 × 水/飼料一次送出 ----------
+const batchStartOpen = ref(false)
+const batchStarting = ref(false)
+
+function openBatchStart() {
+  batchStartOpen.value = true
+}
+function closeBatchStart() {
+  batchStartOpen.value = false
+}
+
+function handleBatchStartSave(rows: Array<{ catId: number; type: 'water' | 'food'; amount: number; note: string }>) {
+  batchStarting.value = true
+  setTimeout(() => {
+    for (const r of rows) {
+      feedingSessions.push({
+        id: nextSessionId++,
+        catId: r.catId,
+        type: r.type,
+        givenAmount: r.amount,
+        unit: r.type === 'water' ? 'ml' : 'g',
+        note: r.note || null,
+        givenAt: new Date().toISOString(),
+        updatedAt: null,
+      })
+    }
+    batchStarting.value = false
+    closeBatchStart()
+  }, 400)
+}
+
+// ---------- 批次完成餵食：所有貓咪目前進行中的餵食，共用一個完成時間 ----------
+const batchCompleteOpen = ref(false)
+const batchCompleting = ref(false)
+
+function openBatchComplete() {
+  batchCompleteOpen.value = true
+}
+function closeBatchComplete() {
+  batchCompleteOpen.value = false
+}
+
+function handleBatchCompleteSave(payload: {
+  items: Array<{ id: number; type: 'water' | 'food'; remainingAmount: number; note: string }>
+  timeValue: string
+}) {
+  batchCompleting.value = true
+  setTimeout(() => {
+    const occurredAt = dateTimeLocalValueToIso(payload.timeValue)
+    for (const item of payload.items) {
+      const idx = feedingSessions.findIndex((s) => s.id === item.id)
+      if (idx === -1) continue
+      const session = feedingSessions[idx]!
+      const consumed = Math.max(0, Math.round((session.givenAmount - item.remainingAmount) * 10) / 10)
+      records.push({
+        id: nextRecordId++,
+        catId: session.catId,
+        type: session.type,
+        amount: consumed,
+        unit: session.unit,
+        note: item.note || null,
+        occurredAt,
+        updatedAt: null,
+      })
+      feedingSessions.splice(idx, 1)
+    }
+    batchCompleting.value = false
+    closeBatchComplete()
+  }, 400)
+}
+
 // ---------- 完成量測：把 session 轉成一筆真正的紀錄 ----------
 const completeSheetOpen = ref(false)
 const completingSession = ref<FeedingSession | null>(null)
@@ -503,6 +578,8 @@ function resetDemo() {
   litterSheetOpen.value = false
   completeSheetOpen.value = false
   cancelSessionConfirmOpen.value = false
+  batchStartOpen.value = false
+  batchCompleteOpen.value = false
   addCatOpen.value = false
   editCatOpen.value = false
   deleteConfirmOpen.value = false
@@ -527,6 +604,12 @@ function resetDemo() {
 
     <div class="card">
       <DateNav :date="selectedDate" @prev-day="goPrevDay" @next-day="goNextDay" @open-all-cats-stats="openAllCatsStats" />
+
+      <BatchFeedingBar
+        :pending-count="feedingSessions.length"
+        @start-batch="openBatchStart"
+        @complete-batch="openBatchComplete"
+      />
 
       <DailyStats
         :water-ml="waterMl"
@@ -596,6 +679,23 @@ function resetDemo() {
     :saving="feedingSessionCompleting"
     @cancel="closeCompleteSheet"
     @save="handleCompleteSave"
+  />
+
+  <BatchStartFeedingSheet
+    :open="batchStartOpen"
+    :cats="cats"
+    :saving="batchStarting"
+    @cancel="closeBatchStart"
+    @save="handleBatchStartSave"
+  />
+
+  <BatchCompleteFeedingSheet
+    :open="batchCompleteOpen"
+    :sessions="feedingSessions"
+    :cats="cats"
+    :saving="batchCompleting"
+    @cancel="closeBatchComplete"
+    @save="handleBatchCompleteSave"
   />
 
   <ConfirmSheet
