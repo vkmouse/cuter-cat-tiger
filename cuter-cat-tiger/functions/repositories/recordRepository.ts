@@ -149,6 +149,52 @@ export async function sumAmountsByDate(db: D1Database, date: string): Promise<Da
   return results
 }
 
+export interface DailyRangeSumRow extends DailySumRow {
+  /** UTC+8 的日期 YYYY-MM-DD。 */
+  day: string
+}
+
+/** 區間（含頭尾，UTC+8 日期）內，每隻貓、每天、每種類型的加總與筆數。 */
+export async function sumAmountsByDateRange(
+  db: D1Database,
+  from: string,
+  to: string,
+): Promise<DailyRangeSumRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT cat_id, date(datetime(occurred_at, '+8 hours')) AS day, type,
+              SUM(amount) AS total, COUNT(*) AS count
+       FROM records
+       WHERE date(datetime(occurred_at, '+8 hours')) BETWEEN ? AND ?
+       GROUP BY cat_id, day, type`,
+    )
+    .bind(from, to)
+    .all<DailyRangeSumRow>()
+  return results
+}
+
+/** 區間（含頭尾，UTC+8 日期）內的紀錄，新到舊；catId 為 null 時不限貓咪。 */
+export async function listRecordsByDateRange(
+  db: D1Database,
+  from: string,
+  to: string,
+  catId: number | null,
+  limit: number,
+): Promise<RecordRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ${RECORD_COLUMNS}
+       FROM records
+       WHERE date(datetime(occurred_at, '+8 hours')) BETWEEN ? AND ?
+         AND (? IS NULL OR cat_id = ?)
+       ORDER BY occurred_at DESC, id DESC
+       LIMIT ?`,
+    )
+    .bind(from, to, catId, catId, limit)
+    .all<RecordRow>()
+  return results
+}
+
 export interface LastOccurredRow {
   cat_id: number
   type: 'pee' | 'poop'

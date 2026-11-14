@@ -119,10 +119,37 @@ export async function removeFeedingSession(db: D1Database, id: number): Promise<
 }
 
 /**
+ * 結案：用 db.batch() 把「刪 session」跟「寫入 records」包成同一個交易，避免中間狀態。
+ * 網頁的 complete 與 MCP 共用；amount 由呼叫端算好（可以是 0 或負數）。
+ */
+export async function finishFeedingSession(
+  db: D1Database,
+  session: FeedingSessionRow,
+  input: { amount: number; occurredAt: string; note: string | null },
+): Promise<RecordRow> {
+  const [, insertResult] = await db.batch<RecordRow>([
+    feedingSessionRepository.buildDeleteFeedingSessionStatement(db, session.id),
+    recordRepository.buildInsertRecordStatement(db, {
+      cat_id: session.cat_id,
+      type: session.type,
+      amount: input.amount,
+      unit: session.unit,
+      note: input.note,
+      occurred_at: input.occurredAt,
+    }),
+  ])
+
+  const row = insertResult.results[0]
+  if (!row) {
+    throw new Error('INSERT records 未回傳資料')
+  }
+  return row
+}
+
+/**
  * 量測完成：用「session 記下的給量」減「這次測到的剩量」算出真正吃/喝掉多少，
  * 允許算出 0 或負數（剩的比給的多也沒關係）。
  * consumed 一律由伺服器重新計算，不信任前端算好的結果。
- * 用 db.batch() 把「刪 session」跟「寫入 records」包成同一個交易，避免中間狀態。
  */
 export async function completeFeedingSession(
   db: D1Database,
@@ -146,21 +173,6 @@ export async function completeFeedingSession(
 
   const amount = session.given_amount - remainingAmount
 
-  const [, insertResult] = await db.batch<RecordRow>([
-    feedingSessionRepository.buildDeleteFeedingSessionStatement(db, id),
-    recordRepository.buildInsertRecordStatement(db, {
-      cat_id: session.cat_id,
-      type: session.type,
-      amount,
-      unit: session.unit,
-      note,
-      occurred_at: occurredAt,
-    }),
-  ])
-
-  const row = insertResult.results[0]
-  if (!row) {
-    throw new Error('INSERT records 未回傳資料')
-  }
+  const row = await finishFeedingSession(db, session, { amount, occurredAt, note })
   return toRecordDto(row)
 }

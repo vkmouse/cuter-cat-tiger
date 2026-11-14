@@ -5,7 +5,7 @@
  * 因此在 `_middleware.ts` 的放行名單內；唯一的門禁是 `Authorization: Bearer`
  * 帶的 access token（JWT），驗 HS256 簽章、`exp` 與 `aud`。
  *
- * 驗證通過後交給 `mcpService` 處理 MCP 協定本身（目前只有一個查時間的工具）。
+ * 驗證通過後交給 `mcpService` 處理 MCP 協定本身（query、mutate 兩個工具）。
  * 任何 HTTP 方法都先走同一套驗證，所以用 onRequest 而不是個別方法。
  */
 import type { Env } from '../types.js'
@@ -44,5 +44,5 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return invalidToken(origin)
   }
 
-  return handleMcpRequest(context.request)
+  return handleMcpRequest(context.request, context.env.DB)
 }

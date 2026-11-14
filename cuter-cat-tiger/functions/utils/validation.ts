@@ -8,6 +8,40 @@ export class ApiError extends Error {
   }
 }
 
+/** MCP 工具回報給呼叫端的錯誤；code 讓 AI 判斷下一步，details 帶可供修正的資訊。 */
+export class ToolError extends Error {
+  code: string
+  details?: Record<string, unknown>
+
+  constructor(code: string, message: string, details?: Record<string, unknown>) {
+    super(message)
+    this.code = code
+    this.details = details
+  }
+}
+
+export interface ToolErrorBody {
+  code: string
+  message: string
+  details?: Record<string, unknown>
+}
+
+/** 既有驗證函式丟的 ApiError 一律視為 INVALID_VALUE，其餘未預期的例外只回通用訊息。 */
+export function toToolErrorBody(err: unknown): ToolErrorBody {
+  if (err instanceof ToolError) {
+    return { code: err.code, message: err.message, details: err.details }
+  }
+  if (err instanceof ApiError) {
+    return { code: 'INVALID_VALUE', message: err.message }
+  }
+  console.error(err)
+  return { code: 'INTERNAL_ERROR', message: '伺服器發生錯誤' }
+}
+
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 export function errorResponse(err: unknown): Response {
   if (err instanceof ApiError) {
     return Response.json({ error: err.message }, { status: err.status })
@@ -64,6 +98,13 @@ export function requirePositiveInt(value: unknown, field: string): number {
     throw new ApiError(400, `${field} 必須為正整數`)
   }
   return num
+}
+
+export function requireIntInRange(value: unknown, field: string, min: number, max: number): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
+    throw new ApiError(400, `${field} 必須為 ${min} 到 ${max} 的整數`)
+  }
+  return value
 }
 
 export function parseIdParam(raw: string | undefined, field = 'id'): number {

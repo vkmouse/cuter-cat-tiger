@@ -16,6 +16,14 @@ export interface InsertFeedingSessionInput {
   given_amount: number
   unit: string
   note: string | null
+  /** SQLite UTC 格式；沒帶就用資料庫的現在時間。 */
+  given_at?: string
+}
+
+export interface UpdateFeedingSessionInput {
+  given_amount?: number
+  note?: string | null
+  given_at?: string
 }
 
 export interface FeedingSessionWithCatNameRow extends FeedingSessionRow {
@@ -24,7 +32,7 @@ export interface FeedingSessionWithCatNameRow extends FeedingSessionRow {
 
 const FEEDING_SESSION_COLUMNS = `id, cat_id, type, given_amount, unit, note, given_at, created_at, updated_at`
 
-/** 語音意圖辨識需要跨貓咪列出全部進行中紀錄，帶上貓咪名稱供 AI 與確認句使用。 */
+/** 跨貓咪列出全部進行中紀錄，帶上貓咪名稱。 */
 export async function listAllFeedingSessions(
   db: D1Database,
 ): Promise<FeedingSessionWithCatNameRow[]> {
@@ -73,11 +81,18 @@ export async function insertFeedingSession(
 ): Promise<FeedingSessionRow> {
   const row = await db
     .prepare(
-      `INSERT INTO feeding_sessions (cat_id, type, given_amount, unit, note)
-       VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO feeding_sessions (cat_id, type, given_amount, unit, note, given_at)
+       VALUES (?, ?, ?, ?, ?, COALESCE(?, datetime('now')))
        RETURNING ${FEEDING_SESSION_COLUMNS}`,
     )
-    .bind(input.cat_id, input.type, input.given_amount, input.unit, input.note ?? null)
+    .bind(
+      input.cat_id,
+      input.type,
+      input.given_amount,
+      input.unit,
+      input.note ?? null,
+      input.given_at ?? null,
+    )
     .first<FeedingSessionRow>()
   if (!row) {
     throw new Error('INSERT feeding_sessions 未回傳資料')
@@ -97,6 +112,41 @@ export async function updateGivenAmount(
        RETURNING ${FEEDING_SESSION_COLUMNS}`,
     )
     .bind(givenAmount, note ?? null, id)
+    .first<FeedingSessionRow>()
+  return row ?? null
+}
+
+/** 只更新有帶入的欄位（跟 updateGivenAmount 不同，沒帶的 note 不會被清掉）；呼叫端須保證至少帶一個欄位。 */
+export async function updateFeedingSessionFields(
+  db: D1Database,
+  id: number,
+  patch: UpdateFeedingSessionInput,
+): Promise<FeedingSessionRow | null> {
+  const sets: string[] = []
+  const values: unknown[] = []
+
+  if (patch.given_amount !== undefined) {
+    sets.push('given_amount = ?')
+    values.push(patch.given_amount)
+  }
+  if (patch.note !== undefined) {
+    sets.push('note = ?')
+    values.push(patch.note)
+  }
+  if (patch.given_at !== undefined) {
+    sets.push('given_at = ?')
+    values.push(patch.given_at)
+  }
+
+  sets.push(`updated_at = datetime('now')`)
+  values.push(id)
+
+  const row = await db
+    .prepare(
+      `UPDATE feeding_sessions SET ${sets.join(', ')} WHERE id = ?
+       RETURNING ${FEEDING_SESSION_COLUMNS}`,
+    )
+    .bind(...values)
     .first<FeedingSessionRow>()
   return row ?? null
 }

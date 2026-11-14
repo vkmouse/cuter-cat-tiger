@@ -1,5 +1,7 @@
 /**
- * 最簡單的 MCP 伺服器（Streamable HTTP，無狀態），目前只有一個查時間的工具。
+ * 最簡單的 MCP 伺服器（Streamable HTTP，無狀態），提供 query（唯讀）與 mutate（寫入）兩個工具，
+ * 讓 AI 能查詢與操作貓咪的飲水、進食、排泄紀錄。工具本身的邏輯在 `mcpQueryService`、
+ * `mcpMutateService`，說明文字在 `mcpToolDefinitions`。
  *
  * 協定版本：實作的是「舊版」那一代（2025-11-25 及更早，有 `initialize` 握手）。
  * 官方 SDK 與目前多數 client 都支援這一代；2026-07-28 起的新版（每個請求自帶
@@ -11,8 +13,12 @@
  *
  * 呼叫者的身分驗證（JWT）由 `api/mcp.ts` 在進來之前完成，這裡只處理協定本身。
  */
+import { queryTool } from './mcpQueryService.js'
+import { mutateTool } from './mcpMutateService.js'
+import { MUTATE_TOOL_NAME, QUERY_TOOL_NAME, TOOL_DEFINITIONS } from './mcpToolDefinitions.js'
+import { isRecord, toToolErrorBody } from '../utils/validation.js'
 
-const SERVER_INFO = { name: 'cuter-cat-tiger', version: '0.1.0' }
+const SERVER_INFO = { name: 'cuter-cat-tiger', version: '0.2.0' }
 
 /** 支援的協定版本，新到舊。 */
 const SUPPORTED_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26']
@@ -22,15 +28,13 @@ const INVALID_REQUEST = -32600
 const METHOD_NOT_FOUND = -32601
 const INVALID_PARAMS = -32602
 
-const TIME_TOOL_NAME = 'get_current_time'
-
-const TOOLS = [
-  {
-    name: TIME_TOOL_NAME,
-    description: '取得目前的日期與時間（台灣時間 UTC+8，並附上 UTC）。',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-  },
-]
+const TOOL_HANDLERS: Record<
+  string,
+  (db: D1Database, args: Record<string, unknown>) => Promise<unknown>
+> = {
+  [QUERY_TOOL_NAME]: queryTool,
+  [MUTATE_TOOL_NAME]: mutateTool,
+}
 
 type JsonRpcId = string | number | null
 
@@ -41,10 +45,6 @@ interface JsonRpcResponse {
   error?: { code: number; message: string }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
 function rpcResult(id: JsonRpcId, result: unknown): JsonRpcResponse {
   return { jsonrpc: '2.0', id, result }
 }
@@ -53,14 +53,25 @@ function rpcError(id: JsonRpcId, code: number, message: string): JsonRpcResponse
   return { jsonrpc: '2.0', id, error: { code, message } }
 }
 
-/** 台灣不實施日光節約時間，固定 UTC+8。 */
-function formatCurrentTime(now: Date): string {
-  const taipei = new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 19)
-  return `台灣時間（UTC+8）：${taipei}+08:00\nUTC：${now.toISOString()}`
+/** 工具執行的結果一律放在 text（JSON 字串）；整個呼叫失敗（例如 ops 格式不對）時 isError 為 true。 */
+async function callTool(
+  db: D1Database,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<{ content: { type: 'text'; text: string }[]; isError: boolean }> {
+  try {
+    const result = await TOOL_HANDLERS[name](db, args)
+    return { content: [{ type: 'text', text: JSON.stringify(result) }], isError: false }
+  } catch (err) {
+    return {
+      content: [{ type: 'text', text: JSON.stringify({ error: toToolErrorBody(err) }) }],
+      isError: true,
+    }
+  }
 }
 
 /** 處理一則 JSON-RPC 訊息；通知（沒有 id）與用戶端送來的回應不需要回覆，回傳 null。 */
-function handleMessage(message: unknown): JsonRpcResponse | null {
+async function handleMessage(db: D1Database, message: unknown): Promise<JsonRpcResponse | null> {
   if (!isRecord(message) || message.jsonrpc !== '2.0') {
     return rpcError(null, INVALID_REQUEST, 'Invalid Request')
   }
@@ -97,15 +108,13 @@ function handleMessage(message: unknown): JsonRpcResponse | null {
     case 'ping':
       return rpcResult(id, {})
     case 'tools/list':
-      return rpcResult(id, { tools: TOOLS })
+      return rpcResult(id, { tools: TOOL_DEFINITIONS })
     case 'tools/call': {
-      if (params.name !== TIME_TOOL_NAME) {
+      if (typeof params.name !== 'string' || !(params.name in TOOL_HANDLERS)) {
         return rpcError(id, INVALID_PARAMS, `Unknown tool: ${String(params.name)}`)
       }
-      return rpcResult(id, {
-        content: [{ type: 'text', text: formatCurrentTime(new Date()) }],
-        isError: false,
-      })
+      const args = isRecord(params.arguments) ? params.arguments : {}
+      return rpcResult(id, await callTool(db, params.name, args))
     }
     default:
       return rpcError(id, METHOD_NOT_FOUND, `Method not found: ${message.method}`)
@@ -113,7 +122,7 @@ function handleMessage(message: unknown): JsonRpcResponse | null {
 }
 
 /** 處理打到 MCP 端點的 HTTP 請求（呼叫端已通過 JWT 驗證）。 */
-export async function handleMcpRequest(request: Request): Promise<Response> {
+export async function handleMcpRequest(request: Request, db: D1Database): Promise<Response> {
   // 無狀態：沒有 GET 串流，也沒有 session 可以用 DELETE 結束。
   if (request.method !== 'POST') {
     return new Response(null, { status: 405, headers: { Allow: 'POST' } })
@@ -145,7 +154,7 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
 
   const responses: JsonRpcResponse[] = []
   for (const message of messages) {
-    const response = handleMessage(message)
+    const response = await handleMessage(db, message)
     if (response) {
       responses.push(response)
     }
