@@ -7,6 +7,9 @@
  * 不受這條規則約束（見第 3 節），在此明確排除；其餘所有功能性端點都必須
  * 具備有效的短效存取憑證才能通過。
  *
+ * OAuth Server 的端點（見 OAuth Server 規格書第 2 節）有各自的保護方式
+ * （Cloudflare Service Token 或 JWT），呼叫者也沒有 Cookie，同樣在此排除。
+ *
  * 這條規則只套用在 functions 目錄對應的 /api/* 路徑，不會影響應用程式
  * 對外提供的靜態內容（頁面殼、前端資源），因為那些不屬於這個目錄結構。
  */
@@ -14,7 +17,14 @@ import type { Env } from '../types.js'
 import { verifyAppToken } from '../utils/jwt.js'
 import { ACCESS_TOKEN_COOKIE_NAME, getCookie } from '../utils/cookie.js'
 
-const EXEMPT_PATHS = new Set(['/api/auth/login', '/api/auth/refresh'])
+const EXEMPT_PATHS = new Set([
+  '/api/auth/login',
+  '/api/auth/refresh',
+  '/api/register',
+  '/api/authorize',
+  '/api/token',
+  '/api/mcp',
+])
 
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { pathname } = new URL(context.request.url)

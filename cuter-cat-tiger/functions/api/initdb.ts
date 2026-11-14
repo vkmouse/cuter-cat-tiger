@@ -38,6 +38,19 @@ const INIT_STATEMENTS = [
      updated_at    TEXT
    )`,
   `CREATE INDEX IF NOT EXISTS idx_feeding_sessions_cat_id ON feeding_sessions(cat_id)`,
+  // OAuth Server：redirect_uris 存成 JSON 陣列文字，只做完全一致比對（見 OAuth 規格書第 11 節）。
+  `CREATE TABLE IF NOT EXISTS oauth_client (
+     client_id     TEXT PRIMARY KEY,
+     redirect_uris TEXT NOT NULL
+   )`,
+  // 授權碼用完即刪；expires_at 為 Unix 時間戳（秒），過期的 code 不會自動清除。
+  `CREATE TABLE IF NOT EXISTS oauth_code (
+     code           TEXT PRIMARY KEY,
+     client_id      TEXT NOT NULL REFERENCES oauth_client(client_id),
+     redirect_uri   TEXT NOT NULL,
+     code_challenge TEXT NOT NULL,
+     expires_at     INTEGER NOT NULL
+   )`,
 ]
 
 export const onRequestPost: PagesFunction<Env> = withErrorHandling(async (context) => {
@@ -46,6 +59,7 @@ export const onRequestPost: PagesFunction<Env> = withErrorHandling(async (contex
     await db.prepare(sql).run()
   }
   return Response.json({
-    message: '資料庫初始化完成（cats / records / feeding_sessions 資料表已建立，若已存在則略過）',
+    message:
+      '資料庫初始化完成（cats / records / feeding_sessions / oauth_client / oauth_code 資料表已建立，若已存在則略過）',
   })
 })
