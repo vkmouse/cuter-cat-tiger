@@ -51,6 +51,17 @@ const INIT_STATEMENTS = [
      code_challenge TEXT NOT NULL,
      expires_at     INTEGER NOT NULL
    )`,
+  // refresh token：只存 SHA-256 雜湊，時間欄位為 Unix 時間戳（秒）。同一條鏈（family_id）
+  // 在任何時刻最多只有一列 used_at IS NULL；absolute_expires_at 在同一條鏈內固定。
+  `CREATE TABLE IF NOT EXISTS oauth_refresh_token (
+     token_hash          TEXT PRIMARY KEY,
+     family_id           TEXT NOT NULL,
+     client_id           TEXT NOT NULL REFERENCES oauth_client(client_id),
+     used_at             INTEGER,
+     idle_expires_at     INTEGER NOT NULL,
+     absolute_expires_at INTEGER NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS idx_oauth_refresh_token_family_id ON oauth_refresh_token(family_id)`,
 ]
 
 export const onRequestPost: PagesFunction<Env> = withErrorHandling(async (context) => {
@@ -60,6 +71,6 @@ export const onRequestPost: PagesFunction<Env> = withErrorHandling(async (contex
   }
   return Response.json({
     message:
-      '資料庫初始化完成（cats / records / feeding_sessions / oauth_client / oauth_code 資料表已建立，若已存在則略過）',
+      '資料庫初始化完成（cats / records / feeding_sessions / oauth_client / oauth_code / oauth_refresh_token 資料表已建立，若已存在則略過）',
   })
 })

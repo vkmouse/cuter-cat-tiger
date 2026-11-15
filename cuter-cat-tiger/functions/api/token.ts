@@ -1,9 +1,11 @@
 /**
- * 用 `code` 換 access token，見 OAuth Server 規格書第 8 節。
+ * 用 `code` 換 access token，或用 refresh token 換新的 access token 與 refresh
+ * token，見 OAuth Server 規格書第 8 節與增補規格書（Refresh Token）。依
+ * `grant_type` 分派（`authorization_code`、`refresh_token`）。
  *
  * 呼叫者是第三方網站的伺服器，沒有 Cloudflare Service Token，也沒有 Client
  * 密鑰，因此在 `_middleware.ts` 的放行名單內；能擋住別人偷用 `code` 的只有
- * `code` 本身加上各項比對與 PKCE。
+ * `code` 本身加上各項比對與 PKCE，refresh token 則靠輪替與重用偵測。
  *
  * 請求 body 是表單格式（application/x-www-form-urlencoded），不是 JSON。
  *

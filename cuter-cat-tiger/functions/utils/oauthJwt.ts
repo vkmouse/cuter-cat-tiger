@@ -10,7 +10,7 @@
  */
 import { jwtVerify, SignJWT } from 'jose'
 
-/** OAuth access token 效期：30 分鐘。不能撤銷，也沒有 refresh token。 */
+/** OAuth access token 效期：30 分鐘。無狀態 JWT，不能撤銷；到期後用 refresh token 換新的。 */
 export const OAUTH_ACCESS_TOKEN_TTL_SECONDS = 30 * 60
 
 function encodeSecret(secret: string): Uint8Array {
